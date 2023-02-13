@@ -1,2 +1,13 @@
-# ungift-alpha-contracts-sample
-sample contracts of unGift α 
+# Sample contracts
+
+## Prerequisite
+
+```sh
+$ npm ci
+```
+
+## Test
+
+```sh
+$ npm run test
+```
