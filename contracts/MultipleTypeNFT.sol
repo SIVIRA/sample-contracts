@@ -8,6 +8,9 @@ import "./BaseNFT.sol";
 contract MultipleTypeNFT is BaseNFT {
     using Counters for Counters.Counter;
 
+    uint256 private constant TOKEN_TYPE_MIN = 1;
+    uint256 private constant TOKEN_TYPE_MAX = 8;
+
     Counters.Counter private _tokenIDCounter;
 
     mapping(uint256 tokenType => mapping(address to => bool isAirdropped)) private _isAirdroppeds;
@@ -61,7 +64,7 @@ contract MultipleTypeNFT is BaseNFT {
 
     function _requireValidTokenType(uint256 tokenType_) private pure {
         require(
-            1 <= tokenType_ && tokenType_ <= 8,
+            TOKEN_TYPE_MIN <= tokenType_ && tokenType_ <= TOKEN_TYPE_MAX,
             "MTNFT: invalid token type"
         );
     }
