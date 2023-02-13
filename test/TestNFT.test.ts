@@ -2,12 +2,12 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { SingleTypeNFT, SingleTypeNFT__factory } from "../typechain-types";
+import { TestNFT, TestNFT__factory } from "../typechain-types";
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
-const NFT_CONTRACT_NAME = "SingleTypeNFT";
+const NFT_CONTRACT_NAME = "TestNFT";
 
 describe(NFT_CONTRACT_NAME, () => {
   const DUMMY_PERIOD = 60;
@@ -18,8 +18,8 @@ describe(NFT_CONTRACT_NAME, () => {
   let other1: SignerWithAddress;
   let other2: SignerWithAddress;
 
-  let nftFactory: SingleTypeNFT__factory;
-  let nft: SingleTypeNFT;
+  let nftFactory: TestNFT__factory;
+  let nft: TestNFT;
 
   before(async () => {
     [owner, other1, other2] = await ethers.getSigners();
@@ -290,89 +290,6 @@ describe(NFT_CONTRACT_NAME, () => {
       now = await helpers.time.increase(DUMMY_PERIOD);
 
       expect(await nft.holdingPeriod(0)).to.equal(now - holdingStarted);
-    });
-
-    it("success -> failure: already airdropped", async () => {
-      // unpause: success
-      await nft.unpause();
-
-      // addMinter: success
-      await nft.addMinter(owner.address);
-
-      // airdrop: success
-      await nft.airdrop(other1.address);
-
-      // airdrop: failure: already airdropped
-      await expect(nft.airdrop(other1.address)).to.be.revertedWith(
-        "STNFT: already airdropped"
-      );
-    });
-  });
-
-  describe("bulkAirdrop", () => {
-    it("failure: caller is not the minter", async () => {
-      await expect(nft.bulkAirdrop([other1.address])).to.be.revertedWith(
-        "BaseNFT: caller is not a minter"
-      );
-    });
-
-    it("failure: paused", async () => {
-      // addMinter: success
-      await nft.addMinter(owner.address);
-
-      // bulkAirdrop: failure: paused
-      await expect(nft.bulkAirdrop([other1.address])).to.be.revertedWith(
-        "Pausable: paused"
-      );
-    });
-
-    it("success", async () => {
-      // unpause: success
-      await nft.unpause();
-
-      // addMinter: success
-      await nft.addMinter(owner.address);
-
-      expect(await nft.balanceOf(other1.address)).to.equal(0);
-      expect(await nft.typeBalanceOf(other1.address, 0)).to.equal(0);
-
-      expect(await nft.balanceOf(other2.address)).to.equal(0);
-      expect(await nft.typeBalanceOf(other2.address, 0)).to.equal(0);
-
-      // bulkAirdrop: success
-      await expect(nft.bulkAirdrop([other1.address, other2.address]))
-        .to.emit(nft, "Transfer")
-        .withArgs(ethers.constants.AddressZero, other1.address, 0)
-        .to.emit(nft, "MetadataUpdate")
-        .withArgs(0)
-        .to.emit(nft, "Transfer")
-        .withArgs(ethers.constants.AddressZero, other2.address, 1)
-        .to.emit(nft, "MetadataUpdate")
-        .withArgs(1);
-
-      expect(await nft.balanceOf(other1.address)).to.equal(1);
-      expect(await nft.ownerOf(0)).to.equal(other1.address);
-      expect(await nft.typeBalanceOf(other1.address, 0)).to.equal(1);
-
-      expect(await nft.balanceOf(other2.address)).to.equal(1);
-      expect(await nft.ownerOf(1)).to.equal(other2.address);
-      expect(await nft.typeBalanceOf(other2.address, 0)).to.equal(1);
-    });
-
-    it("success -> failure: already airdropped", async () => {
-      // unpause: success
-      await nft.unpause();
-
-      // addMinter: success
-      await nft.addMinter(owner.address);
-
-      // bulkAirdrop: success
-      await nft.bulkAirdrop([other1.address]);
-
-      // bulkAirdrop: failure: already airdropped
-      await expect(nft.bulkAirdrop([other1.address])).to.be.revertedWith(
-        "STNFT: already airdropped"
-      );
     });
   });
 
