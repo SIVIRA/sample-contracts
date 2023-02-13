@@ -4,9 +4,8 @@ pragma solidity 0.8.18;
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 import "./BaseNFT.sol";
-import "./IAirdroppable.sol";
 
-contract SingleTypeNFT is BaseNFT, IAirdroppable {
+contract SingleTypeNFT is BaseNFT {
     using Counters for Counters.Counter;
 
     Counters.Counter private _tokenIDCounter;
