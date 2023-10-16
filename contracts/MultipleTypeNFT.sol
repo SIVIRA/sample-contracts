@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import "@openzeppelin/contracts/utils/Counters.sol";
-
 import "./BaseNFT.sol";
 
 contract MultipleTypeNFT is BaseNFT {
-    using Counters for Counters.Counter;
+    uint256 private constant MIN_TOKEN_TYPE = 1;
+    uint256 private constant MAX_TOKEN_TYPE = 8;
 
-    uint256 private constant TOKEN_TYPE_MIN = 1;
-    uint256 private constant TOKEN_TYPE_MAX = 8;
+    uint256 private _tokenIDCounter;
 
-    Counters.Counter private _tokenIDCounter;
-
-    mapping(uint256 tokenType => mapping(address to => bool isAirdropped)) private _isAirdroppeds;
+    mapping(uint256 tokenType => mapping(address to => bool isAirdropped))
+        private _isAirdroppeds;
 
     constructor() BaseNFT("Multiple Type NFT", "MTNFT") {}
 
@@ -23,23 +20,21 @@ contract MultipleTypeNFT is BaseNFT {
         _refreshMetadata();
     }
 
-    function airdropByType(address to_, uint256 tokenType_)
-        external
-        onlyMinter
-        whenNotPaused
-    {
+    function airdropByType(
+        address to_,
+        uint256 tokenType_
+    ) external onlyMinter whenNotPaused {
         _requireValidTokenType(tokenType_);
 
         require(!_isAirdroppeds[tokenType_][to_], "MTNFT: already airdropped");
 
-        _airdropByType(to_, tokenType_);
+        _airdrop(to_, tokenType_, "");
     }
 
-    function bulkAirdropByType(address[] calldata tos_, uint256 tokenType_)
-        external
-        onlyMinter
-        whenNotPaused
-    {
+    function bulkAirdropByType(
+        address[] calldata tos_,
+        uint256 tokenType_
+    ) external onlyMinter whenNotPaused {
         _requireValidTokenType(tokenType_);
 
         for (uint256 i = 0; i < tos_.length; i++) {
@@ -48,7 +43,7 @@ contract MultipleTypeNFT is BaseNFT {
                 "MTNFT: already airdropped"
             );
 
-            _airdropByType(tos_[i], tokenType_);
+            _airdrop(tos_[i], tokenType_, "");
         }
     }
 
@@ -64,23 +59,29 @@ contract MultipleTypeNFT is BaseNFT {
 
     function _requireValidTokenType(uint256 tokenType_) private pure {
         require(
-            TOKEN_TYPE_MIN <= tokenType_ && tokenType_ <= TOKEN_TYPE_MAX,
+            MIN_TOKEN_TYPE <= tokenType_ && tokenType_ <= MAX_TOKEN_TYPE,
             "MTNFT: invalid token type"
         );
     }
 
     function _mintedAmount() private view returns (uint256) {
-        return _tokenIDCounter.current();
+        return _tokenIDCounter;
     }
 
-    function _airdropByType(address to_, uint256 tokenType_) private {
+    function _airdrop(
+        address to_,
+        uint256 tokenType_,
+        string memory tokenURI_
+    ) private {
         _isAirdroppeds[tokenType_][to_] = true;
 
-        uint256 tokenID = _tokenIDCounter.current();
+        _mint(to_, _tokenIDCounter, tokenType_);
 
-        _mint(to_, tokenID, tokenType_);
+        if (bytes(tokenURI_).length > 0) {
+            _tokenURIs[_tokenIDCounter] = tokenURI_;
+        }
 
-        _tokenIDCounter.increment();
+        _tokenIDCounter++;
     }
 
     function _refreshMetadata() private {

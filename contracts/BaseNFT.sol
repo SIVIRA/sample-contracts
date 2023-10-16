@@ -4,12 +4,19 @@ pragma solidity 0.8.18;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
+import "@openzeppelin/contracts/interfaces/IERC4906.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-import "./IERC4906.sol";
 import "./IERC4907.sol";
 
-contract BaseNFT is ERC721Enumerable, ERC2981, IERC4906, IERC4907, Ownable, Pausable {
+contract BaseNFT is
+    ERC721Enumerable,
+    ERC2981,
+    IERC4906,
+    IERC4907,
+    Ownable,
+    Pausable
+{
     bytes4 internal constant ERC4906_INTERFACE_ID = 0x49064906;
 
     using Strings for uint256;
@@ -31,9 +38,11 @@ contract BaseNFT is ERC721Enumerable, ERC2981, IERC4906, IERC4907, Ownable, Paus
 
     mapping(uint256 tokenID => uint256 tokenType) internal _tokenTypes;
     mapping(uint256 tokenType => uint256 supply) internal _typeSupplies;
-    mapping(address owner => mapping(uint256 tokenType => uint256 balance)) internal _typeBalances;
+    mapping(address owner => mapping(uint256 tokenType => uint256 balance))
+        internal _typeBalances;
 
-    mapping(uint256 tokenID => uint256 holdingStartedAt) internal _holdingStartedAts;
+    mapping(uint256 tokenID => uint256 holdingStartedAt)
+        internal _holdingStartedAts;
     mapping(uint256 tokenID => address firstOwner) internal _firstOwners;
 
     bool internal _isRoyaltyFrozen;
@@ -48,20 +57,18 @@ contract BaseNFT is ERC721Enumerable, ERC2981, IERC4906, IERC4907, Ownable, Paus
         _;
     }
 
-    constructor(string memory name_, string memory symbol_)
-        ERC721(name_, symbol_)
-    {
+    constructor(
+        string memory name_,
+        string memory symbol_
+    ) ERC721(name_, symbol_) {
         _setDefaultRoyalty(owner(), 0);
 
         _pause();
     }
 
-    function supportsInterface(bytes4 interfaceID_)
-        public
-        view
-        override(ERC721Enumerable, ERC2981)
-        returns (bool)
-    {
+    function supportsInterface(
+        bytes4 interfaceID_
+    ) public view override(IERC165, ERC721Enumerable, ERC2981) returns (bool) {
         return
             interfaceID_ == ERC4906_INTERFACE_ID ||
             interfaceID_ == type(IERC4907).interfaceId ||
@@ -76,12 +83,9 @@ contract BaseNFT is ERC721Enumerable, ERC2981, IERC4906, IERC4907, Ownable, Paus
         _unpause();
     }
 
-    function tokenURI(uint256 tokenID_)
-        public
-        view
-        override
-        returns (string memory)
-    {
+    function tokenURI(
+        uint256 tokenID_
+    ) public view override returns (string memory) {
         _requireMinted(tokenID_);
 
         string memory uri = _tokenURIs[tokenID_];
@@ -103,10 +107,10 @@ contract BaseNFT is ERC721Enumerable, ERC2981, IERC4906, IERC4907, Ownable, Paus
                 : "";
     }
 
-    function setTokenURI(uint256 tokenID_, string calldata uri_)
-        external
-        onlyOwner
-    {
+    function setTokenURI(
+        uint256 tokenID_,
+        string calldata uri_
+    ) external onlyOwner {
         _requireMinted(tokenID_);
         _requireTokenURINotFrozen(tokenID_);
 
@@ -115,10 +119,7 @@ contract BaseNFT is ERC721Enumerable, ERC2981, IERC4906, IERC4907, Ownable, Paus
         emit MetadataUpdate(tokenID_);
     }
 
-    function freezeTokenURI(uint256 tokenID_)
-        external
-        onlyOwner
-    {
+    function freezeTokenURI(uint256 tokenID_) external onlyOwner {
         _requireMinted(tokenID_);
         _requireTokenURINotFrozen(tokenID_);
 
@@ -137,11 +138,10 @@ contract BaseNFT is ERC721Enumerable, ERC2981, IERC4906, IERC4907, Ownable, Paus
         return _typeSupplies[tokenType_];
     }
 
-    function typeBalanceOf(address owner_, uint256 tokenType_)
-        external
-        view
-        returns (uint256)
-    {
+    function typeBalanceOf(
+        address owner_,
+        uint256 tokenType_
+    ) external view returns (uint256) {
         require(
             owner_ != address(0),
             "BaseNFT: address zero is not a valid owner"
@@ -164,21 +164,19 @@ contract BaseNFT is ERC721Enumerable, ERC2981, IERC4906, IERC4907, Ownable, Paus
         return block.timestamp - _holdingStartedAts[tokenID_];
     }
 
-    function royaltyInfo(uint256 tokenID_, uint256 salePrice_)
-        public
-        view
-        override
-        returns (address, uint256)
-    {
+    function royaltyInfo(
+        uint256 tokenID_,
+        uint256 salePrice_
+    ) public view override returns (address, uint256) {
         _requireMinted(tokenID_);
 
         return super.royaltyInfo(tokenID_, salePrice_);
     }
 
-    function setDefaultRoyalty(address receiver_, uint96 feeNumerator_)
-        external
-        onlyOwner
-    {
+    function setDefaultRoyalty(
+        address receiver_,
+        uint96 feeNumerator_
+    ) external onlyOwner {
         _requireRoyaltyNotFrozen();
 
         _setDefaultRoyalty(receiver_, feeNumerator_);
@@ -254,10 +252,10 @@ contract BaseNFT is ERC721Enumerable, ERC2981, IERC4906, IERC4907, Ownable, Paus
         _isMintersFrozen = true;
     }
 
-    function _requireApprovedOrOwner(address spender_, uint256 tokenID_)
-        internal
-        view
-    {
+    function _requireApprovedOrOwner(
+        address spender_,
+        uint256 tokenID_
+    ) internal view {
         require(
             _isApprovedOrOwner(spender_, tokenID_),
             "BaseNFT: caller is not token owner nor approved"
@@ -276,11 +274,7 @@ contract BaseNFT is ERC721Enumerable, ERC2981, IERC4906, IERC4907, Ownable, Paus
         require(!_isMintersFrozen, "BaseNFT: minters frozen");
     }
 
-    function _mint(
-        address to_,
-        uint256 tokenID_,
-        uint256 tokenType_
-    ) internal {
+    function _mint(address to_, uint256 tokenID_, uint256 tokenType_) internal {
         _tokenTypes[tokenID_] = tokenType_;
 
         _mint(to_, tokenID_);

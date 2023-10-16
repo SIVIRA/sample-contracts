@@ -1,17 +1,9 @@
 import { HardhatUserConfig, task } from "hardhat/config";
-import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import "@nomicfoundation/hardhat-toolbox";
 
 const privkey = process.env.PRIVATE_KEY;
 const accounts = privkey !== undefined ? [privkey] : [];
-
-task("accounts").setAction(async (_, hre: HardhatRuntimeEnvironment) => {
-  const accounts = await hre.ethers.getSigners();
-  for (const account of accounts) {
-    console.log(account.address);
-  }
-});
 
 const config: HardhatUserConfig = {
   solidity: {

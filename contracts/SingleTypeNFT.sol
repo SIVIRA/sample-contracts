@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import "@openzeppelin/contracts/utils/Counters.sol";
-
 import "./BaseNFT.sol";
 
 contract SingleTypeNFT is BaseNFT {
-    using Counters for Counters.Counter;
-
-    Counters.Counter private _tokenIDCounter;
+    uint256 private _tokenIDCounter;
 
     mapping(address to => bool isAirdropped) private _isAirdroppeds;
 
@@ -23,14 +19,16 @@ contract SingleTypeNFT is BaseNFT {
     function airdrop(address to_) external onlyMinter whenNotPaused {
         require(!_isAirdroppeds[to_], "STNFT: already airdropped");
 
-        _airdrop(to_);
+        _airdrop(to_, 0, "");
     }
 
-    function bulkAirdrop(address[] calldata tos_) external onlyMinter whenNotPaused {
+    function bulkAirdrop(
+        address[] calldata tos_
+    ) external onlyMinter whenNotPaused {
         for (uint256 i = 0; i < tos_.length; i++) {
             require(!_isAirdroppeds[tos_[i]], "STNFT: already airdropped");
 
-            _airdrop(tos_[i]);
+            _airdrop(tos_[i], 0, "");
         }
     }
 
@@ -45,17 +43,23 @@ contract SingleTypeNFT is BaseNFT {
     }
 
     function _mintedAmount() private view returns (uint256) {
-        return _tokenIDCounter.current();
+        return _tokenIDCounter;
     }
 
-    function _airdrop(address to_) private {
+    function _airdrop(
+        address to_,
+        uint256 tokenType_,
+        string memory tokenURI_
+    ) private {
         _isAirdroppeds[to_] = true;
 
-        uint256 tokenID = _tokenIDCounter.current();
+        _mint(to_, _tokenIDCounter, tokenType_);
 
-        _mint(to_, tokenID, 0);
+        if (bytes(tokenURI_).length > 0) {
+            _tokenURIs[_tokenIDCounter] = tokenURI_;
+        }
 
-        _tokenIDCounter.increment();
+        _tokenIDCounter++;
     }
 
     function _refreshMetadata() private {
