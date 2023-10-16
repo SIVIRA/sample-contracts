@@ -7,7 +7,7 @@ const accounts = privkey !== undefined ? [privkey] : [];
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.18",
+    version: "0.8.21",
     settings: {
       optimizer: {
         enabled: true,
