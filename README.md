@@ -1,13 +1,16 @@
 # Sample contracts
 
-## Prerequisite
+## Prerequisites
 
-```sh
-$ npm ci
+Requires [pnpm](https://pnpm.io) to be installed.
+
+```
+pnpm install
+pnpm husky install
 ```
 
 ## Test
 
-```sh
-$ npm run test
+```
+pnpm test
 ```

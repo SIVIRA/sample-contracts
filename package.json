@@ -1,12 +1,26 @@
 {
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
   "scripts": {
+    "commit": "cz",
     "test": "hardhat test"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "4.8.1"
+    "@openzeppelin/contracts": "5.0.0"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "2.0.1",
-    "hardhat": "2.12.6"
+    "@commitlint/cli": "17.8.0",
+    "@commitlint/config-conventional": "17.8.0",
+    "@nomicfoundation/hardhat-ethers": "3.0.4",
+    "@nomicfoundation/hardhat-network-helpers": "1.0.9",
+    "@nomicfoundation/hardhat-toolbox": "3.0.0",
+    "commitizen": "4.3.0",
+    "cz-conventional-changelog": "3.3.0",
+    "ethers": "6.8.0",
+    "hardhat": "2.18.1",
+    "husky": "8.0.3"
   }
 }

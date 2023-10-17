@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.18;
+pragma solidity 0.8.21;
 
 interface IERC4907 {
     event UpdateUser(
@@ -8,11 +8,7 @@ interface IERC4907 {
         uint64 expires
     );
 
-    function setUser(
-        uint256 tokenID,
-        address user,
-        uint64 expires
-    ) external;
+    function setUser(uint256 tokenID, address user, uint64 expires) external;
 
     function userOf(uint256 tokenID) external view returns (address);
 
