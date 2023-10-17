@@ -52,26 +52,32 @@ describe(NFT_CONTRACT_NAME, () => {
 
   describe("pause, unpause", () => {
     it("all", async () => {
-      // pause: failure: paused
-      await expect(nft.pause()).to.be.revertedWith("Pausable: paused");
-
-      // unpause: failure: caller is not the owner
-      await expect(nft.connect(minter).unpause()).to.be.revertedWith(
-        "Ownable: caller is not the owner"
+      // pause: failure: EnforcedPause
+      await expect(nft.pause()).to.be.revertedWithCustomError(
+        nft,
+        "EnforcedPause"
       );
+
+      // unpause: failure: OwnableUnauthorizedAccount
+      await expect(nft.connect(minter).unpause())
+        .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
 
       // unpause: success
       await expect(nft.unpause())
         .to.emit(nft, "Unpaused")
         .withArgs(runner.address);
 
-      // unpause: failure: not paused
-      await expect(nft.unpause()).to.be.revertedWith("Pausable: not paused");
-
-      // pause: failure: caller is not the owner
-      await expect(nft.connect(minter).pause()).to.be.revertedWith(
-        "Ownable: caller is not the owner"
+      // unpause: failure: ExpectedPause
+      await expect(nft.unpause()).to.be.revertedWithCustomError(
+        nft,
+        "ExpectedPause"
       );
+
+      // pause: failure: OwnableUnauthorizedAccount
+      await expect(nft.connect(minter).pause())
+        .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
 
       // pause: success
       await expect(nft.pause()).to.emit(nft, "Paused").withArgs(runner.address);
@@ -81,10 +87,10 @@ describe(NFT_CONTRACT_NAME, () => {
   describe("setBaseTokenURI", () => {
     const BASE_TOKEN_URI = "https://nft-metadata.world/";
 
-    it("failure: caller is not the owner", async () => {
-      await expect(
-        nft.connect(minter).setBaseTokenURI(BASE_TOKEN_URI)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+    it("failure: OwnableUnauthorizedAccount", async () => {
+      await expect(nft.connect(minter).setBaseTokenURI(BASE_TOKEN_URI))
+        .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
     });
 
     it("success: single", async () => {
@@ -135,27 +141,27 @@ describe(NFT_CONTRACT_NAME, () => {
     const BASE_TOKEN_URI = "https://nft-metadata.world/";
     const TOKEN_URI = "https://nft-metadata.world/0x0";
 
-    it("failure: caller is not the owner", async () => {
-      await expect(
-        nft.connect(minter).setTokenURI(0, TOKEN_URI)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+    it("failure: OwnableUnauthorizedAccount", async () => {
+      await expect(nft.connect(minter).setTokenURI(0, TOKEN_URI))
+        .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
 
-      await expect(nft.connect(minter).freezeTokenURI(0)).to.be.revertedWith(
-        "Ownable: caller is not the owner"
-      );
+      await expect(nft.connect(minter).freezeTokenURI(0))
+        .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
     });
 
-    it("failure: invalid token ID", async () => {
-      await expect(nft.setTokenURI(0, TOKEN_URI)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
+    it("failure: ERC721NonexistentToken", async () => {
+      await expect(nft.setTokenURI(0, TOKEN_URI))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
 
-      await expect(nft.freezeTokenURI(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
+      await expect(nft.freezeTokenURI(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
     });
 
-    it("success -> failure: token URI frozen", async () => {
+    it("success -> failure: TokenURIFrozen", async () => {
       // unpause: success
       await nft.unpause();
 
@@ -184,49 +190,49 @@ describe(NFT_CONTRACT_NAME, () => {
 
       expect(await nft.tokenURI(0)).to.equal(TOKEN_URI);
 
-      // setTokenURI: failure: token URI frozen
-      await expect(nft.setTokenURI(0, TOKEN_URI)).to.be.revertedWith(
-        "BaseNFT: token URI frozen"
-      );
+      // setTokenURI: failure: TokenURIFrozen
+      await expect(nft.setTokenURI(0, TOKEN_URI))
+        .to.be.revertedWithCustomError(nft, "TokenURIFrozen")
+        .withArgs(0);
 
-      // freezeTokenURI: failure: token URI frozen
-      await expect(nft.freezeTokenURI(0)).to.be.revertedWith(
-        "BaseNFT: token URI frozen"
-      );
+      // freezeTokenURI: failure: TokenURIFrozen
+      await expect(nft.freezeTokenURI(0))
+        .to.be.revertedWithCustomError(nft, "TokenURIFrozen")
+        .withArgs(0);
     });
   });
 
   describe("airdropByType", () => {
-    it("failure: caller is not a minter", async () => {
-      await expect(
-        nft.connect(minter).airdropByType(holder1.address, 1)
-      ).to.be.revertedWith("BaseNFT: caller is not a minter");
+    it("failure: InvalidMinter", async () => {
+      await expect(nft.connect(minter).airdropByType(holder1.address, 1))
+        .to.be.revertedWithCustomError(nft, "InvalidMinter")
+        .withArgs(minter.address);
     });
 
-    it("failure: paused", async () => {
+    it("failure: EnforcedPause", async () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // airdropByType: failure: paused
+      // airdropByType: failure: EnforcedPause
       await expect(
         nft.connect(minter).airdropByType(holder1.address, 1)
-      ).to.be.revertedWith("Pausable: paused");
+      ).to.be.revertedWithCustomError(nft, "EnforcedPause");
     });
 
-    it("failure: invalid token type", async () => {
+    it("failure: InvalidTokenType", async () => {
       // unpause: success
       await nft.unpause();
 
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // airdropByType: failure: invalid token type
-      await expect(
-        nft.connect(minter).airdropByType(holder1.address, 0)
-      ).to.be.revertedWith("MTNFT: invalid token type");
-      await expect(
-        nft.connect(minter).airdropByType(holder1.address, 9)
-      ).to.be.revertedWith("MTNFT: invalid token type");
+      // airdropByType: failure: InvalidTokenType
+      await expect(nft.connect(minter).airdropByType(holder1.address, 0))
+        .to.be.revertedWithCustomError(nft, "InvalidTokenType")
+        .withArgs(0);
+      await expect(nft.connect(minter).airdropByType(holder1.address, 9))
+        .to.be.revertedWithCustomError(nft, "InvalidTokenType")
+        .withArgs(9);
     });
 
     it("success", async () => {
@@ -237,39 +243,39 @@ describe(NFT_CONTRACT_NAME, () => {
       await nft.addMinter(minter.address);
 
       expect(await nft.balanceOf(holder1.address)).to.equal(0);
-      await expect(nft.ownerOf(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
-      await expect(
-        nft.tokenOfOwnerByIndex(holder1.address, 0)
-      ).to.be.revertedWith("ERC721Enumerable: owner index out of bounds");
+      await expect(nft.ownerOf(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
+      await expect(nft.tokenOfOwnerByIndex(holder1.address, 0))
+        .to.be.revertedWithCustomError(nft, "ERC721OutOfBoundsIndex")
+        .withArgs(holder1.address, 0);
       expect(await nft.totalSupply()).to.equal(0);
-      await expect(nft.tokenByIndex(0)).to.be.revertedWith(
-        "ERC721Enumerable: global index out of bounds"
-      );
-      await expect(nft.tokenURI(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
-      await expect(nft.tokenType(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
+      await expect(nft.tokenByIndex(0))
+        .to.be.revertedWithCustomError(nft, "ERC721OutOfBoundsIndex")
+        .withArgs(ethers.ZeroAddress, 0);
+      await expect(nft.tokenURI(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
+      await expect(nft.tokenType(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
       expect(await nft.typeSupply(1)).to.equal(0);
       expect(await nft.typeBalanceOf(holder1.address, 1)).to.equal(0);
-      await expect(nft.firstOwnerOf(0)).to.be.revertedWith(
-        "BaseNFT: invalid token ID"
-      );
-      await expect(nft.holdingPeriod(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
-      await expect(
-        nft.royaltyInfo(0, ethers.parseEther("1"))
-      ).to.be.revertedWith("ERC721: invalid token ID");
-      await expect(nft.userOf(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
-      await expect(nft.userExpires(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
+      await expect(nft.firstOwnerOf(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
+      await expect(nft.holdingPeriod(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
+      await expect(nft.royaltyInfo(0, ethers.parseEther("1")))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
+      await expect(nft.userOf(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
+      await expect(nft.userExpires(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
 
       // airdropByType: success
       await expect(nft.connect(minter).airdropByType(holder1.address, 1))
@@ -310,7 +316,7 @@ describe(NFT_CONTRACT_NAME, () => {
       }
     });
 
-    it("success -> failure: already airdropped -> success", async () => {
+    it("success -> failure: AlreadyAirdropped -> success", async () => {
       // unpause: success
       await nft.unpause();
 
@@ -320,10 +326,10 @@ describe(NFT_CONTRACT_NAME, () => {
       // airdropByType: success
       await nft.connect(minter).airdropByType(holder1.address, 1);
 
-      // airdropByType: failure: already airdropped
-      await expect(
-        nft.connect(minter).airdropByType(holder1.address, 1)
-      ).to.be.revertedWith("MTNFT: already airdropped");
+      // airdropByType: failure: AlreadyAirdropped
+      await expect(nft.connect(minter).airdropByType(holder1.address, 1))
+        .to.be.revertedWithCustomError(nft, "AlreadyAirdropped")
+        .withArgs(1, holder1.address);
 
       // airdropByType: success
       await nft.connect(minter).airdropByType(holder1.address, 2);
@@ -337,36 +343,36 @@ describe(NFT_CONTRACT_NAME, () => {
   });
 
   describe("bulkAirdropByType", () => {
-    it("failure: caller is not a minter", async () => {
-      await expect(
-        nft.connect(minter).bulkAirdropByType([holder1.address], 1)
-      ).to.be.revertedWith("BaseNFT: caller is not a minter");
+    it("failure: InvalidMinter", async () => {
+      await expect(nft.connect(minter).bulkAirdropByType([holder1.address], 1))
+        .to.be.revertedWithCustomError(nft, "InvalidMinter")
+        .withArgs(minter.address);
     });
 
-    it("failure: paused", async () => {
+    it("failure: EnforcedPause", async () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // bulkAirdropByType: failure: paused
+      // bulkAirdropByType: failure: EnforcedPause
       await expect(
         nft.connect(minter).bulkAirdropByType([holder1.address], 1)
-      ).to.be.revertedWith("Pausable: paused");
+      ).to.be.revertedWithCustomError(nft, "EnforcedPause");
     });
 
-    it("failure: invalid token type", async () => {
+    it("failure: InvalidTokenType", async () => {
       // unpause: success
       await nft.unpause();
 
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // bulkAirdropByType: failure: invalid token type
-      await expect(
-        nft.connect(minter).bulkAirdropByType([holder1.address], 0)
-      ).to.be.revertedWith("MTNFT: invalid token type");
-      await expect(
-        nft.connect(minter).bulkAirdropByType([holder1.address], 9)
-      ).to.be.revertedWith("MTNFT: invalid token type");
+      // bulkAirdropByType: failure: InvalidTokenType
+      await expect(nft.connect(minter).bulkAirdropByType([holder1.address], 0))
+        .to.be.revertedWithCustomError(nft, "InvalidTokenType")
+        .withArgs(0);
+      await expect(nft.connect(minter).bulkAirdropByType([holder1.address], 9))
+        .to.be.revertedWithCustomError(nft, "InvalidTokenType")
+        .withArgs(9);
     });
 
     it("success", async () => {
@@ -406,7 +412,7 @@ describe(NFT_CONTRACT_NAME, () => {
       expect(await nft.typeBalanceOf(holder2.address, 1)).to.equal(1);
     });
 
-    it("success -> failure: already airdropped -> success", async () => {
+    it("success -> failure: AlreadyAirdropped -> success", async () => {
       // unpause: success
       await nft.unpause();
 
@@ -416,10 +422,10 @@ describe(NFT_CONTRACT_NAME, () => {
       // bulkAirdropByType: success
       await nft.connect(minter).bulkAirdropByType([holder1.address], 1);
 
-      // bulkAirdropByType: failure: already airdropped
-      await expect(
-        nft.connect(minter).bulkAirdropByType([holder1.address], 1)
-      ).to.be.revertedWith("MTNFT: already airdropped");
+      // bulkAirdropByType: failure: AlreadyAirdropped
+      await expect(nft.connect(minter).bulkAirdropByType([holder1.address], 1))
+        .to.be.revertedWithCustomError(nft, "AlreadyAirdropped")
+        .withArgs(1, holder1.address);
 
       // bulkAirdropByType: success
       await nft.connect(minter).bulkAirdropByType([holder1.address], 2);
@@ -457,9 +463,9 @@ describe(NFT_CONTRACT_NAME, () => {
         expect(await nft.balanceOf(holder2.address)).to.equal(0);
         expect(await nft.ownerOf(0)).to.equal(holder1.address);
         expect(await nft.tokenOfOwnerByIndex(holder1.address, 0)).to.equal(0);
-        await expect(
-          nft.tokenOfOwnerByIndex(holder2.address, 0)
-        ).to.be.revertedWith("ERC721Enumerable: owner index out of bounds");
+        await expect(nft.tokenOfOwnerByIndex(holder2.address, 0))
+          .to.be.revertedWithCustomError(nft, "ERC721OutOfBoundsIndex")
+          .withArgs(holder2.address, 0);
         expect(await nft.totalSupply()).to.equal(1);
         expect(await nft.tokenByIndex(0)).to.equal(0);
         expect(await nft.tokenURI(0)).to.equal("");
@@ -499,9 +505,9 @@ describe(NFT_CONTRACT_NAME, () => {
       expect(await nft.balanceOf(holder1.address)).to.equal(0);
       expect(await nft.balanceOf(holder2.address)).to.equal(1);
       expect(await nft.ownerOf(0)).to.equal(holder2.address);
-      await expect(
-        nft.tokenOfOwnerByIndex(holder1.address, 0)
-      ).to.be.revertedWith("ERC721Enumerable: owner index out of bounds");
+      await expect(nft.tokenOfOwnerByIndex(holder1.address, 0))
+        .to.be.revertedWithCustomError(nft, "ERC721OutOfBoundsIndex")
+        .withArgs(holder1.address, 0);
       expect(await nft.tokenOfOwnerByIndex(holder2.address, 0)).to.equal(0);
       expect(await nft.totalSupply()).to.equal(1);
       expect(await nft.tokenByIndex(0)).to.equal(0);
@@ -526,11 +532,13 @@ describe(NFT_CONTRACT_NAME, () => {
   });
 
   describe("burn", () => {
-    it("failure: invalid token ID", async () => {
-      await expect(nft.burn(0)).to.be.revertedWith("ERC721: invalid token ID");
+    it("failure: ERC721NonexistentToken", async () => {
+      await expect(nft.burn(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
     });
 
-    it("failure: caller is not token owner nor approved", async () => {
+    it("failure: ERC721InsufficientApproval", async () => {
       // unpause: success
       await nft.unpause();
 
@@ -540,10 +548,10 @@ describe(NFT_CONTRACT_NAME, () => {
       // airdropByType: success
       await nft.connect(minter).airdropByType(holder1.address, 1);
 
-      // burn: failure: caller is not token owner nor approved
-      await expect(nft.burn(0)).to.be.revertedWith(
-        "BaseNFT: caller is not token owner nor approved"
-      );
+      // burn: failure: ERC721InsufficientApproval
+      await expect(nft.burn(0))
+        .to.be.revertedWithCustomError(nft, "ERC721InsufficientApproval")
+        .withArgs(runner.address, 0);
     });
 
     it("success", async () => {
@@ -599,37 +607,37 @@ describe(NFT_CONTRACT_NAME, () => {
         .withArgs(0);
 
       expect(await nft.balanceOf(holder1.address)).to.equal(0);
-      await expect(nft.ownerOf(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
-      await expect(
-        nft.tokenOfOwnerByIndex(holder1.address, 0)
-      ).to.be.revertedWith("ERC721Enumerable: owner index out of bounds");
+      await expect(nft.ownerOf(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
+      await expect(nft.tokenOfOwnerByIndex(holder1.address, 0))
+        .to.be.revertedWithCustomError(nft, "ERC721OutOfBoundsIndex")
+        .withArgs(holder1.address, 0);
       expect(await nft.totalSupply()).to.equal(0);
-      await expect(nft.tokenByIndex(0)).to.be.revertedWith(
-        "ERC721Enumerable: global index out of bounds"
-      );
-      await expect(nft.tokenURI(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
-      await expect(nft.tokenType(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
+      await expect(nft.tokenByIndex(0))
+        .to.be.revertedWithCustomError(nft, "ERC721OutOfBoundsIndex")
+        .withArgs(ethers.ZeroAddress, 0);
+      await expect(nft.tokenURI(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
+      await expect(nft.tokenType(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
       expect(await nft.typeSupply(1)).to.equal(0);
       expect(await nft.typeBalanceOf(holder1.address, 1)).to.equal(0);
       expect(await nft.firstOwnerOf(0)).to.equal(holder1.address);
-      await expect(nft.holdingPeriod(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
-      await expect(
-        nft.royaltyInfo(0, ethers.parseEther("1"))
-      ).to.be.revertedWith("ERC721: invalid token ID");
-      await expect(nft.userOf(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
-      await expect(nft.userExpires(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
+      await expect(nft.holdingPeriod(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
+      await expect(nft.royaltyInfo(0, ethers.parseEther("1")))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
+      await expect(nft.userOf(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
+      await expect(nft.userExpires(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
     });
   });
 
@@ -638,23 +646,25 @@ describe(NFT_CONTRACT_NAME, () => {
     const FEE_DENOMINAGOR = BigInt(10000);
     const SALE_PRICE = ethers.parseEther("1");
 
-    it("failure: caller is not the owner", async () => {
+    it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(
         nft.connect(minter).setDefaultRoyalty(minter.address, FEE_NUMERATOR)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      )
+        .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
 
-      await expect(nft.connect(minter).freezeRoyalty()).to.be.revertedWith(
-        "Ownable: caller is not the owner"
-      );
+      await expect(nft.connect(minter).freezeRoyalty())
+        .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
     });
 
-    it("success -> failure: royalty frozen", async () => {
+    it("success -> failure: RoyaltyFrozen", async () => {
       // setDefaultRoyalty: success
       await nft.setDefaultRoyalty(minter.address, FEE_NUMERATOR);
 
-      await expect(nft.royaltyInfo(0, SALE_PRICE)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
+      await expect(nft.royaltyInfo(0, SALE_PRICE))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
 
       // unpause: success
       await nft.unpause();
@@ -674,21 +684,29 @@ describe(NFT_CONTRACT_NAME, () => {
       // freezeRoyalty: success
       await nft.freezeRoyalty();
 
-      // freezeRoyalty: failure: royalty frozen
-      await expect(nft.freezeRoyalty()).to.be.revertedWith(
-        "BaseNFT: royalty frozen"
+      // setDefaultRoyalty: failure: RoyaltyFrozen
+      await expect(
+        nft.setDefaultRoyalty(minter.address, FEE_NUMERATOR)
+      ).to.be.revertedWithCustomError(nft, "RoyaltyFrozen");
+
+      // freezeRoyalty: failure: RoyaltyFrozen
+      await expect(nft.freezeRoyalty()).to.be.revertedWithCustomError(
+        nft,
+        "RoyaltyFrozen"
       );
     });
   });
 
   describe("setUser", () => {
-    it("failure: invalid token ID", async () => {
+    it("failure: ERC721NonexistentToken", async () => {
       await expect(
         nft.setUser(0, holder2.address, (await utils.now()) + DUMMY_PERIOD)
-      ).to.be.revertedWith("ERC721: invalid token ID");
+      )
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
     });
 
-    it("failure: caller is not token owner nor approved", async () => {
+    it("failure: ERC721InsufficientApproval", async () => {
       // unpause: success
       await nft.unpause();
 
@@ -698,10 +716,12 @@ describe(NFT_CONTRACT_NAME, () => {
       // airdropByType: success
       await nft.connect(minter).airdropByType(holder1.address, 1);
 
-      // setUser: failure: caller is not token owner nor approved
+      // setUser: failure: ERC721InsufficientApproval
       await expect(
         nft.setUser(0, holder2.address, (await utils.now()) + DUMMY_PERIOD)
-      ).to.be.revertedWith("BaseNFT: caller is not token owner nor approved");
+      )
+        .to.be.revertedWithCustomError(nft, "ERC721InsufficientApproval")
+        .withArgs(runner.address, 0);
     });
 
     it("success: by owner", async () => {
@@ -711,12 +731,12 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      await expect(nft.userOf(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
-      await expect(nft.userExpires(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
+      await expect(nft.userOf(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
+      await expect(nft.userExpires(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
 
       // airdropByType: success
       await nft.connect(minter).airdropByType(holder1.address, 1);
@@ -750,12 +770,12 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      await expect(nft.userOf(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
-      await expect(nft.userExpires(0)).to.be.revertedWith(
-        "ERC721: invalid token ID"
-      );
+      await expect(nft.userOf(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
+      await expect(nft.userExpires(0))
+        .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
+        .withArgs(0);
 
       // airdropByType: success
       await nft.connect(minter).airdropByType(holder1.address, 1);
@@ -790,25 +810,25 @@ describe(NFT_CONTRACT_NAME, () => {
     it("all", async () => {
       expect(await nft.isMinter(minter.address)).to.be.false;
 
-      // freezeMinters: failure: caller is not the owner
-      await expect(nft.connect(minter).freezeMinters()).to.be.revertedWith(
-        "Ownable: caller is not the owner"
-      );
+      // freezeMinters: failure: OwnableUnauthorizedAccount
+      await expect(nft.connect(minter).freezeMinters())
+        .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
 
-      // addMinter: failure: caller is not the owner
-      await expect(
-        nft.connect(minter).addMinter(minter.address)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      // addMinter: failure: OwnableUnauthorizedAccount
+      await expect(nft.connect(minter).addMinter(minter.address))
+        .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
 
-      // addMinter: failure: new minter is the zero address
-      await expect(nft.addMinter(ethers.ZeroAddress)).to.be.revertedWith(
-        "BaseNFT: new minter is the zero address"
-      );
+      // addMinter: failure: InvalidMinter
+      await expect(nft.addMinter(ethers.ZeroAddress))
+        .to.be.revertedWithCustomError(nft, "InvalidMinter")
+        .withArgs(ethers.ZeroAddress);
 
-      // removeMinter: failure: already removed
-      await expect(nft.removeMinter(minter.address)).to.be.revertedWith(
-        "BaseNFT: already removed"
-      );
+      // removeMinter: failure: InvalidMinter
+      await expect(nft.removeMinter(minter.address))
+        .to.be.revertedWithCustomError(nft, "InvalidMinter")
+        .withArgs(minter.address);
 
       // addMinter: success
       await expect(nft.addMinter(minter.address))
@@ -817,15 +837,15 @@ describe(NFT_CONTRACT_NAME, () => {
 
       expect(await nft.isMinter(minter.address)).to.be.true;
 
-      // addMinter: failure: already added
-      await expect(nft.addMinter(minter.address)).to.be.revertedWith(
-        "BaseNFT: already added"
-      );
+      // addMinter: failure: MinterAlreadyAdded
+      await expect(nft.addMinter(minter.address))
+        .to.be.revertedWithCustomError(nft, "MinterAlreadyAdded")
+        .withArgs(minter.address);
 
-      // removeMinter: failure: caller is not the owner
-      await expect(
-        nft.connect(minter).removeMinter(minter.address)
-      ).to.be.revertedWith("Ownable: caller is not the owner");
+      // removeMinter: failure: OwnableUnauthorizedAccount
+      await expect(nft.connect(minter).removeMinter(minter.address))
+        .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
 
       // removeMinter: success
       await expect(nft.removeMinter(minter.address))
@@ -837,28 +857,30 @@ describe(NFT_CONTRACT_NAME, () => {
       // freezeMinters: success
       await nft.freezeMinters();
 
-      // addMinters: failure: minters frozen
-      await expect(nft.addMinter(minter.address)).to.be.revertedWith(
-        "BaseNFT: minters frozen"
+      // addMinters: failure: MintersFrozen
+      await expect(nft.addMinter(minter.address)).to.be.revertedWithCustomError(
+        nft,
+        "MintersFrozen"
       );
 
-      // removeMinters: failure: minters frozen
-      await expect(nft.removeMinter(minter.address)).to.be.revertedWith(
-        "BaseNFT: minters frozen"
-      );
+      // removeMinters: failure: MintersFrozen
+      await expect(
+        nft.removeMinter(minter.address)
+      ).to.be.revertedWithCustomError(nft, "MintersFrozen");
 
-      // freezeMinters: failure: minters frozen
-      await expect(nft.freezeMinters()).to.be.revertedWith(
-        "BaseNFT: minters frozen"
+      // freezeMinters: failure: MintersFrozen
+      await expect(nft.freezeMinters()).to.be.revertedWithCustomError(
+        nft,
+        "MintersFrozen"
       );
     });
   });
 
   describe("refreshMetadata", () => {
-    it("failure: caller is not the owner", async () => {
-      await expect(nft.connect(minter).refreshMetadata()).to.be.revertedWith(
-        "Ownable: caller is not the owner"
-      );
+    it("failure: OwnableUnauthorizedAccount", async () => {
+      await expect(nft.connect(minter).refreshMetadata())
+        .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
     });
 
     it("success: single", async () => {

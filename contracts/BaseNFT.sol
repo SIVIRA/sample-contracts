@@ -1,19 +1,32 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/token/common/ERC2981.sol";
-import "@openzeppelin/contracts/interfaces/IERC4906.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
+import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
+import {IERC4907} from "./IERC4907.sol";
 
-import "./IERC4907.sol";
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {ERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
+
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+
+error RoyaltyFrozen();
+
+error TokenURIFrozen(uint256 tokenID);
+
+error InvalidMinter(address minter);
+error MinterAlreadyAdded(address minter);
+error MintersFrozen();
 
 contract BaseNFT is
-    ERC721Enumerable,
-    ERC2981,
     IERC4906,
     IERC4907,
+    ERC721Enumerable,
+    ERC2981,
     Ownable,
     Pausable
 {
@@ -53,14 +66,17 @@ contract BaseNFT is
     bool internal _isMintersFrozen;
 
     modifier onlyMinter() {
-        require(_minters[msg.sender], "BaseNFT: caller is not a minter");
+        if (!_minters[_msgSender()]) {
+            revert InvalidMinter(_msgSender());
+        }
         _;
     }
 
     constructor(
+        address owner_,
         string memory name_,
         string memory symbol_
-    ) ERC721(name_, symbol_) {
+    ) ERC721(name_, symbol_) Ownable(owner_) {
         _setDefaultRoyalty(owner(), 0);
 
         _pause();
@@ -86,7 +102,7 @@ contract BaseNFT is
     function tokenURI(
         uint256 tokenID_
     ) public view override returns (string memory) {
-        _requireMinted(tokenID_);
+        _requireOwned(tokenID_);
 
         string memory uri = _tokenURIs[tokenID_];
 
@@ -111,7 +127,7 @@ contract BaseNFT is
         uint256 tokenID_,
         string calldata uri_
     ) external onlyOwner {
-        _requireMinted(tokenID_);
+        _requireOwned(tokenID_);
         _requireTokenURINotFrozen(tokenID_);
 
         _tokenURIs[tokenID_] = uri_;
@@ -120,7 +136,7 @@ contract BaseNFT is
     }
 
     function freezeTokenURI(uint256 tokenID_) external onlyOwner {
-        _requireMinted(tokenID_);
+        _requireOwned(tokenID_);
         _requireTokenURINotFrozen(tokenID_);
 
         _isTokenURIFrozens[tokenID_] = true;
@@ -129,7 +145,7 @@ contract BaseNFT is
     }
 
     function tokenType(uint256 tokenID_) external view returns (uint256) {
-        _requireMinted(tokenID_);
+        _requireOwned(tokenID_);
 
         return _tokenTypes[tokenID_];
     }
@@ -142,24 +158,24 @@ contract BaseNFT is
         address owner_,
         uint256 tokenType_
     ) external view returns (uint256) {
-        require(
-            owner_ != address(0),
-            "BaseNFT: address zero is not a valid owner"
-        );
+        if (owner_ == address(0)) {
+            revert ERC721InvalidOwner(address(0));
+        }
 
         return _typeBalances[owner_][tokenType_];
     }
 
     function firstOwnerOf(uint256 tokenID_) external view returns (address) {
         address firstOwner = _firstOwners[tokenID_];
-
-        require(firstOwner != address(0), "BaseNFT: invalid token ID");
+        if (firstOwner == address(0)) {
+            revert ERC721NonexistentToken(tokenID_);
+        }
 
         return firstOwner;
     }
 
     function holdingPeriod(uint256 tokenID_) external view returns (uint256) {
-        _requireMinted(tokenID_);
+        _requireOwned(tokenID_);
 
         return block.timestamp - _holdingStartedAts[tokenID_];
     }
@@ -168,7 +184,7 @@ contract BaseNFT is
         uint256 tokenID_,
         uint256 salePrice_
     ) public view override returns (address, uint256) {
-        _requireMinted(tokenID_);
+        _requireOwned(tokenID_);
 
         return super.royaltyInfo(tokenID_, salePrice_);
     }
@@ -193,7 +209,7 @@ contract BaseNFT is
         address user_,
         uint64 expires_
     ) external {
-        _requireApprovedOrOwner(msg.sender, tokenID_);
+        _checkAuthorized(ownerOf(tokenID_), _msgSender(), tokenID_);
 
         UserInfo storage userInfo = _users[tokenID_];
         userInfo.user = user_;
@@ -203,7 +219,7 @@ contract BaseNFT is
     }
 
     function userOf(uint256 tokenID_) external view returns (address) {
-        _requireMinted(tokenID_);
+        _requireOwned(tokenID_);
 
         if (block.timestamp >= uint256(_users[tokenID_].expires)) {
             return address(0);
@@ -213,7 +229,7 @@ contract BaseNFT is
     }
 
     function userExpires(uint256 tokenID_) external view returns (uint256) {
-        _requireMinted(tokenID_);
+        _requireOwned(tokenID_);
 
         return _users[tokenID_].expires;
     }
@@ -221,11 +237,12 @@ contract BaseNFT is
     function addMinter(address minter_) external onlyOwner {
         _requireMintersNotFrozen();
 
-        require(
-            minter_ != address(0),
-            "BaseNFT: new minter is the zero address"
-        );
-        require(!_minters[minter_], "BaseNFT: already added");
+        if (minter_ == address(0)) {
+            revert InvalidMinter(address(0));
+        }
+        if (_minters[minter_]) {
+            revert MinterAlreadyAdded(minter_);
+        }
 
         _minters[minter_] = true;
 
@@ -239,7 +256,9 @@ contract BaseNFT is
     function removeMinter(address minter_) external onlyOwner {
         _requireMintersNotFrozen();
 
-        require(_minters[minter_], "BaseNFT: already removed");
+        if (!_minters[minter_]) {
+            revert InvalidMinter(minter_);
+        }
 
         delete _minters[minter_];
 
@@ -252,26 +271,22 @@ contract BaseNFT is
         _isMintersFrozen = true;
     }
 
-    function _requireApprovedOrOwner(
-        address spender_,
-        uint256 tokenID_
-    ) internal view {
-        require(
-            _isApprovedOrOwner(spender_, tokenID_),
-            "BaseNFT: caller is not token owner nor approved"
-        );
-    }
-
     function _requireTokenURINotFrozen(uint256 tokenID_) internal view {
-        require(!_isTokenURIFrozens[tokenID_], "BaseNFT: token URI frozen");
+        if (_isTokenURIFrozens[tokenID_]) {
+            revert TokenURIFrozen(tokenID_);
+        }
     }
 
     function _requireRoyaltyNotFrozen() internal view {
-        require(!_isRoyaltyFrozen, "BaseNFT: royalty frozen");
+        if (_isRoyaltyFrozen) {
+            revert RoyaltyFrozen();
+        }
     }
 
     function _requireMintersNotFrozen() internal view {
-        require(!_isMintersFrozen, "BaseNFT: minters frozen");
+        if (_isMintersFrozen) {
+            revert MintersFrozen();
+        }
     }
 
     function _mint(address to_, uint256 tokenID_, uint256 tokenType_) internal {
@@ -280,71 +295,56 @@ contract BaseNFT is
         _mint(to_, tokenID_);
     }
 
-    function _mint(address to_, uint256 tokenID_) internal override {
+    function _update(
+        address to_,
+        uint256 tokenID_,
+        address auth_
+    ) internal override returns (address) {
         uint256 tokenType_ = _tokenTypes[tokenID_];
 
-        super._mint(to_, tokenID_);
-
-        _typeSupplies[tokenType_]++;
-        _typeBalances[to_][tokenType_]++;
-
-        _firstOwners[tokenID_] = to_;
-
-        emit MetadataUpdate(tokenID_);
-    }
-
-    function _burn(uint256 tokenID_) internal override {
-        address owner_ = ownerOf(tokenID_);
-        uint256 tokenType_ = _tokenTypes[tokenID_];
-
-        super._burn(tokenID_);
-
-        if (bytes(_tokenURIs[tokenID_]).length > 0) {
-            delete _tokenURIs[tokenID_];
+        address prevOwner = super._update(to_, tokenID_, auth_);
+        if (prevOwner == to_) {
+            return prevOwner;
         }
 
-        delete _tokenTypes[tokenID_];
-        _typeSupplies[tokenType_]--;
-        _typeBalances[owner_][tokenType_]--;
+        bool isMinted = prevOwner == address(0);
+        bool isBurned = to_ == address(0);
 
-        _resetTokenRoyalty(tokenID_);
+        if (isMinted) {
+            _typeSupplies[tokenType_]++;
 
-        emit MetadataUpdate(tokenID_);
-    }
-
-    function _transfer(
-        address from_,
-        address to_,
-        uint256 tokenID_
-    ) internal override {
-        uint256 tokenType_ = _tokenTypes[tokenID_];
-
-        super._transfer(from_, to_, tokenID_);
-
-        _typeBalances[from_][tokenType_]--;
-        _typeBalances[to_][tokenType_]++;
-    }
-
-    function _afterTokenTransfer(
-        address from_,
-        address to_,
-        uint256 firstTokenID_,
-        uint256 batchSize_
-    ) internal override {
-        super._afterTokenTransfer(from_, to_, firstTokenID_, batchSize_);
-
-        if (from_ != to_) {
-            if (to_ == address(0)) {
-                delete _holdingStartedAts[firstTokenID_];
-            } else {
-                _holdingStartedAts[firstTokenID_] = block.timestamp;
-            }
-
-            if (_users[firstTokenID_].user != address(0)) {
-                delete _users[firstTokenID_];
-
-                emit UpdateUser(firstTokenID_, address(0), 0);
-            }
+            _firstOwners[tokenID_] = to_;
+        } else {
+            _typeBalances[prevOwner][tokenType_]--;
         }
+
+        if (isBurned) {
+            _typeSupplies[tokenType_]--;
+
+            _resetTokenRoyalty(tokenID_);
+
+            if (bytes(_tokenURIs[tokenID_]).length > 0) {
+                delete _tokenURIs[tokenID_];
+            }
+
+            delete _tokenTypes[tokenID_];
+            delete _holdingStartedAts[tokenID_];
+        } else {
+            _typeBalances[to_][tokenType_]++;
+
+            _holdingStartedAts[tokenID_] = block.timestamp;
+        }
+
+        if (isMinted || isBurned) {
+            emit MetadataUpdate(tokenID_);
+        }
+
+        if (_users[tokenID_].user != address(0)) {
+            delete _users[tokenID_];
+
+            emit UpdateUser(tokenID_, address(0), 0);
+        }
+
+        return prevOwner;
     }
 }

@@ -6,8 +6,8 @@ settings:
 
 dependencies:
   '@openzeppelin/contracts':
-    specifier: 4.9.3
-    version: 4.9.3
+    specifier: 5.0.0
+    version: 5.0.0
 
 devDependencies:
   '@commitlint/cli':
@@ -1052,8 +1052,8 @@ packages:
       '@nomicfoundation/solidity-analyzer-win32-x64-msvc': 0.1.1
     dev: true
 
-  /@openzeppelin/contracts@4.9.3:
-    resolution: {integrity: sha512-He3LieZ1pP2TNt5JbkPA4PNT9WC3gOTOlDcFGJW4Le4QKqwmiNJCRt44APfxMxvq7OugU/cqYuPcSBzOw38DAg==}
+  /@openzeppelin/contracts@5.0.0:
+    resolution: {integrity: sha512-bv2sdS6LKqVVMLI5+zqnNrNU/CA+6z6CmwFXm/MzmOPBRSO5reEJN7z0Gbzvs0/bv/MZZXNklubpwy3v2+azsw==}
     dev: false
 
   /@scure/base@1.1.3:

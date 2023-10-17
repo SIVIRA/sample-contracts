@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.21;
 
-import "./BaseNFT.sol";
+import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 
-contract SingleTypeNFT is BaseNFT {
+import {BaseNFT} from "./BaseNFT.sol";
+
+error AlreadyAirdropped(address to);
+
+contract SingleTypeNFT is IERC4906, BaseNFT {
     uint256 private _tokenIDCounter;
 
     mapping(address to => bool isAirdropped) private _isAirdroppeds;
 
-    constructor() BaseNFT("Signle Type NFT", "STNFT") {}
+    constructor() BaseNFT(_msgSender(), "Signle Type NFT", "STNFT") {}
 
     function setBaseTokenURI(string calldata uri_) external onlyOwner {
         _baseTokenURI = uri_;
@@ -17,7 +21,7 @@ contract SingleTypeNFT is BaseNFT {
     }
 
     function airdrop(address to_) external onlyMinter whenNotPaused {
-        require(!_isAirdroppeds[to_], "STNFT: already airdropped");
+        _requireNotAirdropped(to_);
 
         _airdrop(to_, 0, "");
     }
@@ -26,20 +30,26 @@ contract SingleTypeNFT is BaseNFT {
         address[] calldata tos_
     ) external onlyMinter whenNotPaused {
         for (uint256 i = 0; i < tos_.length; i++) {
-            require(!_isAirdroppeds[tos_[i]], "STNFT: already airdropped");
+            _requireNotAirdropped(tos_[i]);
 
             _airdrop(tos_[i], 0, "");
         }
     }
 
     function burn(uint256 tokenID_) external {
-        _requireApprovedOrOwner(msg.sender, tokenID_);
+        _checkAuthorized(ownerOf(tokenID_), _msgSender(), tokenID_);
 
         _burn(tokenID_);
     }
 
     function refreshMetadata() external onlyOwner {
         _refreshMetadata();
+    }
+
+    function _requireNotAirdropped(address to_) private view {
+        if (_isAirdroppeds[to_]) {
+            revert AlreadyAirdropped(to_);
+        }
     }
 
     function _mintedAmount() private view returns (uint256) {
