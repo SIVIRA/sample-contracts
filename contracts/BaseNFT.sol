@@ -14,9 +14,14 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
-error RoyaltyFrozen();
+error InvalidTokenTypeRange(uint256 minTokenType, uint256 maxTokenType);
+error TokenTypeRangeFrozen();
+
+error InvalidTokenType(uint256 tokenType);
 
 error TokenURIFrozen(uint256 tokenID);
+
+error RoyaltyFrozen();
 
 error InvalidMinter(address minter);
 error MinterAlreadyAdded(address minter);
@@ -45,14 +50,18 @@ contract BaseNFT is
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
 
-    string internal _baseTokenURI;
-    mapping(uint256 tokenID => string uri) internal _tokenURIs;
-    mapping(uint256 tokenID => bool isFrozen) internal _isTokenURIFrozens;
+    uint256 internal _minTokenType;
+    uint256 internal _maxTokenType;
+    bool internal _isTokenTypeRangeFrozen;
 
     mapping(uint256 tokenID => uint256 tokenType) internal _tokenTypes;
     mapping(uint256 tokenType => uint256 supply) internal _typeSupplies;
     mapping(address owner => mapping(uint256 tokenType => uint256 balance))
         internal _typeBalances;
+
+    string internal _baseTokenURI;
+    mapping(uint256 tokenID => string uri) internal _tokenURIs;
+    mapping(uint256 tokenID => bool isFrozen) internal _isTokenURIFrozens;
 
     mapping(uint256 tokenID => uint256 holdingStartedAt)
         internal _holdingStartedAts;
@@ -69,17 +78,27 @@ contract BaseNFT is
         if (!_minters[_msgSender()]) {
             revert InvalidMinter(_msgSender());
         }
+
         _;
     }
 
     constructor(
         address owner_,
         string memory name_,
-        string memory symbol_
+        string memory symbol_,
+        uint256 minTokenType_,
+        uint256 maxTokenType_
     ) ERC721(name_, symbol_) Ownable(owner_) {
-        _setDefaultRoyalty(owner(), 0);
+        if (minTokenType_ > maxTokenType_) {
+            revert InvalidTokenTypeRange(minTokenType_, maxTokenType_);
+        }
 
         _pause();
+
+        _minTokenType = minTokenType_;
+        _maxTokenType = maxTokenType_;
+
+        _setDefaultRoyalty(owner_, 0);
     }
 
     function supportsInterface(
@@ -97,6 +116,41 @@ contract BaseNFT is
 
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    function minTokenType() external view returns (uint256) {
+        return _minTokenType;
+    }
+
+    function maxTokenType() external view returns (uint256) {
+        return _maxTokenType;
+    }
+
+    function freezeTokenTypeRange() external onlyOwner {
+        _requireTokenTypeRangeNotFrozen();
+
+        _isTokenTypeRangeFrozen = true;
+    }
+
+    function tokenType(uint256 tokenID_) external view returns (uint256) {
+        _requireOwned(tokenID_);
+
+        return _tokenTypes[tokenID_];
+    }
+
+    function typeSupply(uint256 tokenType_) external view returns (uint256) {
+        return _typeSupplies[tokenType_];
+    }
+
+    function typeBalanceOf(
+        address owner_,
+        uint256 tokenType_
+    ) external view returns (uint256) {
+        if (owner_ == address(0)) {
+            revert ERC721InvalidOwner(address(0));
+        }
+
+        return _typeBalances[owner_][tokenType_];
     }
 
     function tokenURI(
@@ -142,27 +196,6 @@ contract BaseNFT is
         _isTokenURIFrozens[tokenID_] = true;
 
         emit PermanentURI(_tokenURIs[tokenID_], tokenID_);
-    }
-
-    function tokenType(uint256 tokenID_) external view returns (uint256) {
-        _requireOwned(tokenID_);
-
-        return _tokenTypes[tokenID_];
-    }
-
-    function typeSupply(uint256 tokenType_) external view returns (uint256) {
-        return _typeSupplies[tokenType_];
-    }
-
-    function typeBalanceOf(
-        address owner_,
-        uint256 tokenType_
-    ) external view returns (uint256) {
-        if (owner_ == address(0)) {
-            revert ERC721InvalidOwner(address(0));
-        }
-
-        return _typeBalances[owner_][tokenType_];
     }
 
     function firstOwnerOf(uint256 tokenID_) external view returns (address) {
@@ -271,6 +304,12 @@ contract BaseNFT is
         _isMintersFrozen = true;
     }
 
+    function _requireTokenTypeRangeNotFrozen() internal view {
+        if (_isTokenTypeRangeFrozen) {
+            revert TokenTypeRangeFrozen();
+        }
+    }
+
     function _requireTokenURINotFrozen(uint256 tokenID_) internal view {
         if (_isTokenURIFrozens[tokenID_]) {
             revert TokenURIFrozen(tokenID_);
@@ -290,6 +329,10 @@ contract BaseNFT is
     }
 
     function _mint(address to_, uint256 tokenID_, uint256 tokenType_) internal {
+        if (tokenType_ < _minTokenType || _maxTokenType < tokenType_) {
+            revert InvalidTokenType(tokenType_);
+        }
+
         _tokenTypes[tokenID_] = tokenType_;
 
         _mint(to_, tokenID_);

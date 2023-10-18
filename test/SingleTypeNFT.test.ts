@@ -34,6 +34,8 @@ describe(NFT_CONTRACT_NAME, () => {
     it("success", async () => {
       expect(await nft.owner()).to.equal(runner.address);
       expect(await nft.paused()).to.be.true;
+      expect(await nft.minTokenType()).to.equal(0);
+      expect(await nft.maxTokenType()).to.equal(0);
     });
   });
 
@@ -81,6 +83,21 @@ describe(NFT_CONTRACT_NAME, () => {
 
       // pause: success
       await expect(nft.pause()).to.emit(nft, "Paused").withArgs(runner.address);
+    });
+  });
+
+  describe("freezeTokenTypeRange", () => {
+    it("failure: OwnableUnauthorizedAccount", async () => {
+      await expect(nft.connect(minter).freezeTokenTypeRange())
+        .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
+    });
+
+    it("failure: TokenTypeRangeFrozen", async () => {
+      await expect(nft.freezeTokenTypeRange()).to.be.revertedWithCustomError(
+        nft,
+        "TokenTypeRangeFrozen"
+      );
     });
   });
 
