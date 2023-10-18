@@ -5,19 +5,39 @@ import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 
 import {BaseNFT} from "./BaseNFT.sol";
 
-error InvalidTokenType(uint256 tokenType);
+error InvalidMaxTokenType(uint256 maxTokenType);
+
 error AlreadyAirdropped(uint256 tokenType, address to);
 
 contract MultipleTypeNFT is IERC4906, BaseNFT {
-    uint256 private constant MIN_TOKEN_TYPE = 1;
-    uint256 private constant MAX_TOKEN_TYPE = 8;
+    uint256 private constant _MIN_TOKEN_TYPE = 1;
 
     uint256 private _tokenIDCounter;
 
     mapping(uint256 tokenType => mapping(address to => bool isAirdropped))
         private _isAirdroppeds;
 
-    constructor() BaseNFT(_msgSender(), "Multiple Type NFT", "MTNFT") {}
+    constructor(
+        uint256 maxTokenType_
+    )
+        BaseNFT(
+            _msgSender(),
+            "Multiple Type NFT",
+            "MTNFT",
+            _MIN_TOKEN_TYPE,
+            maxTokenType_
+        )
+    {}
+
+    function setMaxTokenType(uint256 maxTokenType_) external onlyOwner {
+        _requireTokenTypeRangeNotFrozen();
+
+        if (maxTokenType_ < _maxTokenType) {
+            revert InvalidMaxTokenType(maxTokenType_);
+        }
+
+        _maxTokenType = maxTokenType_;
+    }
 
     function setBaseTokenURI(string calldata uri_) external onlyOwner {
         _baseTokenURI = uri_;
@@ -29,7 +49,6 @@ contract MultipleTypeNFT is IERC4906, BaseNFT {
         address to_,
         uint256 tokenType_
     ) external onlyMinter whenNotPaused {
-        _requireValidTokenType(tokenType_);
         _requireNotAirdropped(tokenType_, to_);
 
         _airdrop(to_, tokenType_, "");
@@ -39,8 +58,6 @@ contract MultipleTypeNFT is IERC4906, BaseNFT {
         address[] calldata tos_,
         uint256 tokenType_
     ) external onlyMinter whenNotPaused {
-        _requireValidTokenType(tokenType_);
-
         for (uint256 i = 0; i < tos_.length; i++) {
             _requireNotAirdropped(tokenType_, tos_[i]);
 
@@ -56,12 +73,6 @@ contract MultipleTypeNFT is IERC4906, BaseNFT {
 
     function refreshMetadata() external onlyOwner {
         _refreshMetadata();
-    }
-
-    function _requireValidTokenType(uint256 tokenType_) private pure {
-        if (tokenType_ < MIN_TOKEN_TYPE || MAX_TOKEN_TYPE < tokenType_) {
-            revert InvalidTokenType(tokenType_);
-        }
     }
 
     function _requireNotAirdropped(

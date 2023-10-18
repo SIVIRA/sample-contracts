@@ -12,7 +12,9 @@ contract SingleTypeNFT is IERC4906, BaseNFT {
 
     mapping(address to => bool isAirdropped) private _isAirdroppeds;
 
-    constructor() BaseNFT(_msgSender(), "Signle Type NFT", "STNFT") {}
+    constructor() BaseNFT(_msgSender(), "Signle Type NFT", "STNFT", 0, 0) {
+        _isTokenTypeRangeFrozen = true;
+    }
 
     function setBaseTokenURI(string calldata uri_) external onlyOwner {
         _baseTokenURI = uri_;
