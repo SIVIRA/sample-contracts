@@ -8,11 +8,21 @@ import {BaseNFT} from "./BaseNFT.sol";
 error AlreadyAirdropped(address to);
 
 contract SingleTypeNFT is IERC4906, BaseNFT {
+    uint256 private constant _TOKEN_TYPE = 0;
+
     uint256 private _tokenIDCounter;
 
     mapping(address to => bool isAirdropped) private _isAirdroppeds;
 
-    constructor() BaseNFT(_msgSender(), "Signle Type NFT", "STNFT", 0, 0) {
+    constructor()
+        BaseNFT(
+            _msgSender(),
+            "Signle Type NFT",
+            "STNFT",
+            _TOKEN_TYPE,
+            _TOKEN_TYPE
+        )
+    {
         _isTokenTypeRangeFrozen = true;
     }
 
@@ -25,7 +35,7 @@ contract SingleTypeNFT is IERC4906, BaseNFT {
     function airdrop(address to_) external onlyMinter whenNotPaused {
         _requireNotAirdropped(to_);
 
-        _airdrop(to_, 0, "");
+        _airdrop(to_, _TOKEN_TYPE, "");
     }
 
     function bulkAirdrop(
@@ -34,7 +44,7 @@ contract SingleTypeNFT is IERC4906, BaseNFT {
         for (uint256 i = 0; i < tos_.length; i++) {
             _requireNotAirdropped(tos_[i]);
 
-            _airdrop(tos_[i], 0, "");
+            _airdrop(tos_[i], _TOKEN_TYPE, "");
         }
     }
 
