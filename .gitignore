@@ -1,7 +1,4 @@
 /artifacts/
 /cache/
-/coverage/
 /node_modules/
 /typechain-types/
-/.envrc
-/coverage.json

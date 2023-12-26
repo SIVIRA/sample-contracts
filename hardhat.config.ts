@@ -1,13 +1,23 @@
-import { HardhatUserConfig, task } from "hardhat/config";
+import { HardhatUserConfig } from "hardhat/config";
+import { NetworksUserConfig } from "hardhat/types";
 
 import "@nomicfoundation/hardhat-toolbox";
 
-const privkey = process.env.PRIVATE_KEY;
-const accounts = privkey !== undefined ? [privkey] : [];
+const networks: NetworksUserConfig = {};
+if (
+  process.env.NETWORK !== undefined &&
+  process.env.RPC_URL !== undefined &&
+  process.env.PRIVATE_KEY !== undefined
+) {
+  networks[process.env.NETWORK] = {
+    url: process.env.RPC_URL,
+    accounts: [process.env.PRIVATE_KEY],
+  };
+}
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.21",
+    version: "0.8.23",
     settings: {
       optimizer: {
         enabled: true,
@@ -15,16 +25,7 @@ const config: HardhatUserConfig = {
       },
     },
   },
-  networks: {
-    polygon: {
-      url: "https://polygon-mainnet.unwallet.world",
-      accounts: accounts,
-    },
-    mumbai: {
-      url: "https://polygon-testnet.unwallet.world",
-      accounts: accounts,
-    },
-  },
+  networks: networks,
   gasReporter: {
     enabled: true,
   },
