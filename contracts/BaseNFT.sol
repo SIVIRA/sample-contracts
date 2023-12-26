@@ -14,19 +14,6 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
-error InvalidTokenTypeRange(uint256 minTokenType, uint256 maxTokenType);
-error TokenTypeRangeFrozen();
-
-error InvalidTokenType(uint256 tokenType);
-
-error TokenURIFrozen(uint256 tokenID);
-
-error RoyaltyFrozen();
-
-error InvalidMinter(address minter);
-error MinterAlreadyAdded(address minter);
-error MintersFrozen();
-
 contract BaseNFT is
     IERC4906,
     IERC4907,
@@ -35,20 +22,33 @@ contract BaseNFT is
     Ownable,
     Pausable
 {
-    bytes4 internal constant ERC4906_INTERFACE_ID = 0x49064906;
-
     using Strings for uint256;
 
-    struct UserInfo {
-        address user;
-        uint64 expires;
-    }
+    error InvalidTokenTypeRange(uint256 minTokenType, uint256 maxTokenType);
+    error TokenTypeRangeFrozen();
+
+    error InvalidTokenType(uint256 tokenType);
+
+    error TokenURIFrozen(uint256 tokenID);
+
+    error RoyaltyFrozen();
+
+    error InvalidMinter(address minter);
+    error MinterAlreadyAdded(address minter);
+    error MintersFrozen();
 
     // indicate to OpenSea that an NFT's metadata is frozen
     event PermanentURI(string uri, uint256 indexed tokenID);
 
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
+
+    struct UserInfo {
+        address user;
+        uint64 expires;
+    }
+
+    bytes4 internal constant ERC4906_INTERFACE_ID = 0x49064906;
 
     uint256 internal _minTokenType;
     uint256 internal _maxTokenType;
