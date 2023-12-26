@@ -5,6 +5,8 @@
     }
   },
   "scripts": {
+    "build": "hardhat compile",
+    "clean": "rm -rf artifacts cache typechain-types",
     "commit": "cz",
     "test": "hardhat test"
   },
