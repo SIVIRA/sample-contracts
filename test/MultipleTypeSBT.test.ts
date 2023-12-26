@@ -2,12 +2,13 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { SingleTypeSBT, SingleTypeSBT__factory } from "../typechain-types";
+import { MultipleTypeSBT, MultipleTypeSBT__factory } from "../typechain-types";
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
-const CONTRACT_NAME = "SingleTypeSBT";
+const CONTRACT_NAME = "MultipleTypeSBT";
+const MAX_TOKEN_TYPE = 3;
 
 describe(CONTRACT_NAME, () => {
   const DUMMY_PERIOD = 60;
@@ -17,8 +18,8 @@ describe(CONTRACT_NAME, () => {
   let holder1: HardhatEthersSigner;
   let holder2: HardhatEthersSigner;
 
-  let sbtFactory: SingleTypeSBT__factory;
-  let sbt: SingleTypeSBT;
+  let sbtFactory: MultipleTypeSBT__factory;
+  let sbt: MultipleTypeSBT;
 
   before(async () => {
     [runner, minter, holder1, holder2] = await ethers.getSigners();
@@ -26,7 +27,7 @@ describe(CONTRACT_NAME, () => {
 
   beforeEach(async () => {
     sbtFactory = await ethers.getContractFactory(CONTRACT_NAME);
-    sbt = await sbtFactory.deploy();
+    sbt = await sbtFactory.deploy(MAX_TOKEN_TYPE);
     await sbt.waitForDeployment();
   });
 
@@ -34,8 +35,8 @@ describe(CONTRACT_NAME, () => {
     it("success", async () => {
       expect(await sbt.owner()).to.equal(runner.address);
       expect(await sbt.paused()).to.be.true;
-      expect(await sbt.minTokenType()).to.equal(0);
-      expect(await sbt.maxTokenType()).to.equal(0);
+      expect(await sbt.minTokenType()).to.equal(1);
+      expect(await sbt.maxTokenType()).to.equal(MAX_TOKEN_TYPE);
     });
   });
 
@@ -84,14 +85,39 @@ describe(CONTRACT_NAME, () => {
     });
   });
 
-  describe("freezeTokenTypeRange", () => {
+  describe("setMaxTokenType, freezeTokenTypeRange", async () => {
     it("failure: OwnableUnauthorizedAccount", async () => {
+      await expect(sbt.connect(minter).setMaxTokenType(MAX_TOKEN_TYPE + 1))
+        .to.be.revertedWithCustomError(sbt, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
+
       await expect(sbt.connect(minter).freezeTokenTypeRange())
         .to.be.revertedWithCustomError(sbt, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
     });
 
-    it("failure: TokenTypeRangeFrozen", async () => {
+    it("failure: InvalidMaxTokenType", async () => {
+      await expect(sbt.setMaxTokenType(MAX_TOKEN_TYPE - 1))
+        .to.be.revertedWithCustomError(sbt, "InvalidMaxTokenType")
+        .withArgs(MAX_TOKEN_TYPE - 1);
+    });
+
+    it("success -> failure: TokenTypeRangeFrozen", async () => {
+      // setMaxTokenType: success
+      await sbt.setMaxTokenType(MAX_TOKEN_TYPE + 1);
+
+      expect(await sbt.minTokenType()).to.equal(1);
+      expect(await sbt.maxTokenType()).to.equal(MAX_TOKEN_TYPE + 1);
+
+      // freezeTokenTypeRange: success
+      await sbt.freezeTokenTypeRange();
+
+      // setMaxTokenType: failure: TokenTypeRangeFrozen
+      await expect(
+        sbt.setMaxTokenType(MAX_TOKEN_TYPE + 2)
+      ).to.be.revertedWithCustomError(sbt, "TokenTypeRangeFrozen");
+
+      // freezeTokenTypeRange: failure: TokenTypeRangeFrozen
       await expect(sbt.freezeTokenTypeRange()).to.be.revertedWithCustomError(
         sbt,
         "TokenTypeRangeFrozen"
@@ -115,8 +141,8 @@ describe(CONTRACT_NAME, () => {
       // addMinter: success
       await sbt.addMinter(minter.address);
 
-      // airdrop: success
-      await sbt.connect(minter).airdrop(holder1.address);
+      // airdropByType: success
+      await sbt.connect(minter).airdropByType(holder1.address, 1);
 
       expect(await sbt.tokenURI(0)).to.equal("");
 
@@ -125,7 +151,7 @@ describe(CONTRACT_NAME, () => {
         .to.emit(sbt, "MetadataUpdate")
         .withArgs(0);
 
-      expect(await sbt.tokenURI(0)).to.equal(BASE_TOKEN_URI + "0/0");
+      expect(await sbt.tokenURI(0)).to.equal(BASE_TOKEN_URI + "1/0");
     });
 
     it("success: plural", async () => {
@@ -135,9 +161,9 @@ describe(CONTRACT_NAME, () => {
       // addMinter: success
       await sbt.addMinter(minter.address);
 
-      // airdrop: success
-      await sbt.connect(minter).airdrop(holder1.address);
-      await sbt.connect(minter).airdrop(holder2.address);
+      // airdropByType: success
+      await sbt.connect(minter).airdropByType(holder1.address, 1);
+      await sbt.connect(minter).airdropByType(holder2.address, 1);
 
       expect(await sbt.tokenURI(0)).to.equal("");
       expect(await sbt.tokenURI(1)).to.equal("");
@@ -147,8 +173,8 @@ describe(CONTRACT_NAME, () => {
         .to.emit(sbt, "BatchMetadataUpdate")
         .withArgs(0, 1);
 
-      expect(await sbt.tokenURI(0)).to.equal(BASE_TOKEN_URI + "0/0");
-      expect(await sbt.tokenURI(1)).to.equal(BASE_TOKEN_URI + "0/1");
+      expect(await sbt.tokenURI(0)).to.equal(BASE_TOKEN_URI + "1/0");
+      expect(await sbt.tokenURI(1)).to.equal(BASE_TOKEN_URI + "1/1");
     });
   });
 
@@ -183,13 +209,13 @@ describe(CONTRACT_NAME, () => {
       // addMinter: success
       await sbt.addMinter(minter.address);
 
-      // airdrop: success
-      await sbt.connect(minter).airdrop(holder1.address);
+      // airdropByType: success
+      await sbt.connect(minter).airdropByType(holder1.address, 1);
 
       // setBaseTokenURI: success
       await sbt.setBaseTokenURI(BASE_TOKEN_URI);
 
-      expect(await sbt.tokenURI(0)).to.equal(BASE_TOKEN_URI + "0/0");
+      expect(await sbt.tokenURI(0)).to.equal(BASE_TOKEN_URI + "1/0");
 
       // setTokenURI: success
       await expect(sbt.setTokenURI(0, TOKEN_URI))
@@ -217,9 +243,9 @@ describe(CONTRACT_NAME, () => {
     });
   });
 
-  describe("airdrop", () => {
+  describe("airdropByType", () => {
     it("failure: InvalidMinter", async () => {
-      await expect(sbt.connect(minter).airdrop(holder1.address))
+      await expect(sbt.connect(minter).airdropByType(holder1.address, 1))
         .to.be.revertedWithCustomError(sbt, "InvalidMinter")
         .withArgs(minter.address);
     });
@@ -228,10 +254,28 @@ describe(CONTRACT_NAME, () => {
       // addMinter: success
       await sbt.addMinter(minter.address);
 
-      // airdrop: failure: EnforcedPause
+      // airdropByType: failure: EnforcedPause
       await expect(
-        sbt.connect(minter).airdrop(holder1.address)
+        sbt.connect(minter).airdropByType(holder1.address, 1)
       ).to.be.revertedWithCustomError(sbt, "EnforcedPause");
+    });
+
+    it("failure: InvalidTokenType", async () => {
+      // unpause: success
+      await sbt.unpause();
+
+      // addMinter: success
+      await sbt.addMinter(minter.address);
+
+      // airdropByType: failure: InvalidTokenType
+      await expect(sbt.connect(minter).airdropByType(holder1.address, 0))
+        .to.be.revertedWithCustomError(sbt, "InvalidTokenType")
+        .withArgs(0);
+      await expect(
+        sbt.connect(minter).airdropByType(holder1.address, MAX_TOKEN_TYPE + 1)
+      )
+        .to.be.revertedWithCustomError(sbt, "InvalidTokenType")
+        .withArgs(MAX_TOKEN_TYPE + 1);
     });
 
     it("success", async () => {
@@ -258,14 +302,14 @@ describe(CONTRACT_NAME, () => {
       await expect(sbt.tokenType(0))
         .to.be.revertedWithCustomError(sbt, "ERC721NonexistentToken")
         .withArgs(0);
-      expect(await sbt.typeSupply(0)).to.equal(0);
-      expect(await sbt.typeBalanceOf(holder1.address, 0)).to.equal(0);
+      expect(await sbt.typeSupply(1)).to.equal(0);
+      expect(await sbt.typeBalanceOf(holder1.address, 1)).to.equal(0);
       await expect(sbt.holdingPeriod(0))
         .to.be.revertedWithCustomError(sbt, "ERC721NonexistentToken")
         .withArgs(0);
 
-      // airdrop: success
-      await expect(sbt.connect(minter).airdrop(holder1.address))
+      // airdropByType: success
+      await expect(sbt.connect(minter).airdropByType(holder1.address, 1))
         .to.emit(sbt, "Transfer")
         .withArgs(ethers.ZeroAddress, holder1.address, 0)
         .to.emit(sbt, "MetadataUpdate")
@@ -279,9 +323,9 @@ describe(CONTRACT_NAME, () => {
       expect(await sbt.totalSupply()).to.equal(1);
       expect(await sbt.tokenByIndex(0)).to.equal(0);
       expect(await sbt.tokenURI(0)).to.equal("");
-      expect(await sbt.tokenType(0)).to.equal(0);
-      expect(await sbt.typeSupply(0)).to.equal(1);
-      expect(await sbt.typeBalanceOf(holder1.address, 0)).to.equal(1);
+      expect(await sbt.tokenType(0)).to.equal(1);
+      expect(await sbt.typeSupply(1)).to.equal(1);
+      expect(await sbt.typeBalanceOf(holder1.address, 1)).to.equal(1);
       expect(await sbt.holdingPeriod(0)).to.equal(0);
 
       // time passed
@@ -292,26 +336,35 @@ describe(CONTRACT_NAME, () => {
       }
     });
 
-    it("success -> failure: AlreadyAirdropped", async () => {
+    it("success -> failure: AlreadyAirdropped -> success", async () => {
       // unpause: success
       await sbt.unpause();
 
       // addMinter: success
       await sbt.addMinter(minter.address);
 
-      // airdrop: success
-      await sbt.connect(minter).airdrop(holder1.address);
+      // airdropByType: success
+      await sbt.connect(minter).airdropByType(holder1.address, 1);
 
-      // airdrop: failure: AlreadyAirdropped
-      await expect(sbt.connect(minter).airdrop(holder1.address))
+      // airdropByType: failure: AlreadyAirdropped
+      await expect(sbt.connect(minter).airdropByType(holder1.address, 1))
         .to.be.revertedWithCustomError(sbt, "AlreadyAirdropped")
-        .withArgs(holder1.address);
+        .withArgs(1, holder1.address);
+
+      // airdropByType: success
+      await sbt.connect(minter).airdropByType(holder1.address, 2);
+
+      expect(await sbt.balanceOf(holder1)).to.equal(2);
+      expect(await sbt.ownerOf(0)).to.equal(holder1.address);
+      expect(await sbt.ownerOf(1)).to.equal(holder1.address);
+      expect(await sbt.typeBalanceOf(holder1, 1)).to.equal(1);
+      expect(await sbt.typeBalanceOf(holder1, 2)).to.equal(1);
     });
   });
 
-  describe("bulkAirdrop", () => {
+  describe("bulkAirdropByType", () => {
     it("failure: InvalidMinter", async () => {
-      await expect(sbt.connect(minter).bulkAirdrop([holder1.address]))
+      await expect(sbt.connect(minter).bulkAirdropByType([holder1.address], 1))
         .to.be.revertedWithCustomError(sbt, "InvalidMinter")
         .withArgs(minter.address);
     });
@@ -320,10 +373,30 @@ describe(CONTRACT_NAME, () => {
       // addMinter: success
       await sbt.addMinter(minter.address);
 
-      // bulkAirdrop: failure: EnforcedPause
+      // bulkAirdropByType: failure: EnforcedPause
       await expect(
-        sbt.connect(minter).bulkAirdrop([holder1.address])
+        sbt.connect(minter).bulkAirdropByType([holder1.address], 1)
       ).to.be.revertedWithCustomError(sbt, "EnforcedPause");
+    });
+
+    it("failure: InvalidTokenType", async () => {
+      // unpause: success
+      await sbt.unpause();
+
+      // addMinter: success
+      await sbt.addMinter(minter.address);
+
+      // bulkAirdropByType: failure: InvalidTokenType
+      await expect(sbt.connect(minter).bulkAirdropByType([holder1.address], 0))
+        .to.be.revertedWithCustomError(sbt, "InvalidTokenType")
+        .withArgs(0);
+      await expect(
+        sbt
+          .connect(minter)
+          .bulkAirdropByType([holder1.address], MAX_TOKEN_TYPE + 1)
+      )
+        .to.be.revertedWithCustomError(sbt, "InvalidTokenType")
+        .withArgs(MAX_TOKEN_TYPE + 1);
     });
 
     it("success", async () => {
@@ -334,14 +407,16 @@ describe(CONTRACT_NAME, () => {
       await sbt.addMinter(minter.address);
 
       expect(await sbt.balanceOf(holder1.address)).to.equal(0);
-      expect(await sbt.typeBalanceOf(holder1.address, 0)).to.equal(0);
+      expect(await sbt.typeBalanceOf(holder1.address, 1)).to.equal(0);
 
       expect(await sbt.balanceOf(holder2.address)).to.equal(0);
-      expect(await sbt.typeBalanceOf(holder2.address, 0)).to.equal(0);
+      expect(await sbt.typeBalanceOf(holder2.address, 1)).to.equal(0);
 
-      // bulkAirdrop: success
+      // bulkAirdropByType: success
       await expect(
-        sbt.connect(minter).bulkAirdrop([holder1.address, holder2.address])
+        sbt
+          .connect(minter)
+          .bulkAirdropByType([holder1.address, holder2.address], 1)
       )
         .to.emit(sbt, "Transfer")
         .withArgs(ethers.ZeroAddress, holder1.address, 0)
@@ -354,27 +429,36 @@ describe(CONTRACT_NAME, () => {
 
       expect(await sbt.balanceOf(holder1.address)).to.equal(1);
       expect(await sbt.ownerOf(0)).to.equal(holder1.address);
-      expect(await sbt.typeBalanceOf(holder1.address, 0)).to.equal(1);
+      expect(await sbt.typeBalanceOf(holder1.address, 1)).to.equal(1);
 
       expect(await sbt.balanceOf(holder2.address)).to.equal(1);
       expect(await sbt.ownerOf(1)).to.equal(holder2.address);
-      expect(await sbt.typeBalanceOf(holder2.address, 0)).to.equal(1);
+      expect(await sbt.typeBalanceOf(holder2.address, 1)).to.equal(1);
     });
 
-    it("success -> failure: AlreadyAirdropped", async () => {
+    it("success -> failure: AlreadyAirdropped -> success", async () => {
       // unpause: success
       await sbt.unpause();
 
       // addMinter: success
       await sbt.addMinter(minter.address);
 
-      // bulkAirdrop: success
-      await sbt.connect(minter).bulkAirdrop([holder1.address]);
+      // bulkAirdropByType: success
+      await sbt.connect(minter).bulkAirdropByType([holder1.address], 1);
 
-      // bulkAirdrop: failure: AlreadyAirdropped
-      await expect(sbt.connect(minter).bulkAirdrop([holder1.address]))
+      // bulkAirdropByType: failure: AlreadyAirdropped
+      await expect(sbt.connect(minter).bulkAirdropByType([holder1.address], 1))
         .to.be.revertedWithCustomError(sbt, "AlreadyAirdropped")
-        .withArgs(holder1.address);
+        .withArgs(1, holder1.address);
+
+      // bulkAirdropByType: success
+      await sbt.connect(minter).bulkAirdropByType([holder1.address], 2);
+
+      expect(await sbt.balanceOf(holder1)).to.equal(2);
+      expect(await sbt.ownerOf(0)).to.equal(holder1.address);
+      expect(await sbt.ownerOf(1)).to.equal(holder1.address);
+      expect(await sbt.typeBalanceOf(holder1, 1)).to.equal(1);
+      expect(await sbt.typeBalanceOf(holder1, 2)).to.equal(1);
     });
   });
 
@@ -386,8 +470,8 @@ describe(CONTRACT_NAME, () => {
       // addMinter: success
       await sbt.addMinter(minter.address);
 
-      // airdrop: success
-      await sbt.connect(minter).airdrop(holder1.address);
+      // airdropByType: success
+      await sbt.connect(minter).airdropByType(holder1.address, 1);
 
       // safeTransferFrom: failure: Soulbound
       await expect(
@@ -416,8 +500,8 @@ describe(CONTRACT_NAME, () => {
       // addMinter: success
       await sbt.addMinter(minter.address);
 
-      // airdrop: success
-      await sbt.connect(minter).airdrop(holder1.address);
+      // airdropByType: success
+      await sbt.connect(minter).airdropByType(holder1.address, 1);
 
       // burn: failure: ERC721InsufficientApproval
       await expect(sbt.burn(0))
@@ -432,8 +516,8 @@ describe(CONTRACT_NAME, () => {
       // addMinter: success
       await sbt.addMinter(minter.address);
 
-      // airdrop: success
-      await sbt.connect(minter).airdrop(holder1.address);
+      // airdropByType: success
+      await sbt.connect(minter).airdropByType(holder1.address, 1);
 
       expect(await sbt.balanceOf(holder1.address)).to.equal(1);
       expect(await sbt.ownerOf(0)).to.equal(holder1.address);
@@ -441,9 +525,9 @@ describe(CONTRACT_NAME, () => {
       expect(await sbt.totalSupply()).to.equal(1);
       expect(await sbt.tokenByIndex(0)).to.equal(0);
       expect(await sbt.tokenURI(0)).to.equal("");
-      expect(await sbt.tokenType(0)).to.equal(0);
-      expect(await sbt.typeSupply(0)).to.equal(1);
-      expect(await sbt.typeBalanceOf(holder1.address, 0)).to.equal(1);
+      expect(await sbt.tokenType(0)).to.equal(1);
+      expect(await sbt.typeSupply(1)).to.equal(1);
+      expect(await sbt.typeBalanceOf(holder1.address, 1)).to.equal(1);
       expect(await sbt.holdingPeriod(0)).to.equal(0);
 
       // burn: success
@@ -470,8 +554,8 @@ describe(CONTRACT_NAME, () => {
       await expect(sbt.tokenType(0))
         .to.be.revertedWithCustomError(sbt, "ERC721NonexistentToken")
         .withArgs(0);
-      expect(await sbt.typeSupply(0)).to.equal(0);
-      expect(await sbt.typeBalanceOf(holder1.address, 0)).to.equal(0);
+      expect(await sbt.typeSupply(1)).to.equal(0);
+      expect(await sbt.typeBalanceOf(holder1.address, 1)).to.equal(0);
       await expect(sbt.holdingPeriod(0))
         .to.be.revertedWithCustomError(sbt, "ERC721NonexistentToken")
         .withArgs(0);
@@ -562,8 +646,8 @@ describe(CONTRACT_NAME, () => {
       // addMinter: success
       await sbt.addMinter(minter.address);
 
-      // airdrop: success
-      await sbt.connect(minter).airdrop(holder1.address);
+      // airdropByType: success
+      await sbt.connect(minter).airdropByType(holder1.address, 1);
 
       // refreshMetadata: success: single
       await expect(sbt.refreshMetadata())
@@ -578,9 +662,9 @@ describe(CONTRACT_NAME, () => {
       // addMinter: success
       await sbt.addMinter(minter.address);
 
-      // airdrop: success
-      await sbt.connect(minter).airdrop(holder1.address);
-      await sbt.connect(minter).airdrop(holder2.address);
+      // airdropByType: success
+      await sbt.connect(minter).airdropByType(holder1.address, 1);
+      await sbt.connect(minter).airdropByType(holder2.address, 1);
 
       // refreshMetadata: success: plural
       await expect(sbt.refreshMetadata())
