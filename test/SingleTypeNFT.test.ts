@@ -7,9 +7,9 @@ import { SingleTypeNFT, SingleTypeNFT__factory } from "../typechain-types";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
-const NFT_CONTRACT_NAME = "SingleTypeNFT";
+const CONTRACT_NAME = "SingleTypeNFT";
 
-describe(NFT_CONTRACT_NAME, () => {
+describe(CONTRACT_NAME, () => {
   const DUMMY_PERIOD = 60;
 
   let runner: HardhatEthersSigner;
@@ -25,7 +25,7 @@ describe(NFT_CONTRACT_NAME, () => {
   });
 
   beforeEach(async () => {
-    nftFactory = await ethers.getContractFactory(NFT_CONTRACT_NAME);
+    nftFactory = await ethers.getContractFactory(CONTRACT_NAME);
     nft = await nftFactory.deploy();
     await nft.waitForDeployment();
   });
