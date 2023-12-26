@@ -9,7 +9,7 @@
     "test": "hardhat test"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "5.0.0"
+    "@openzeppelin/contracts": "5.0.1"
   },
   "devDependencies": {
     "@commitlint/cli": "18.4.3",
