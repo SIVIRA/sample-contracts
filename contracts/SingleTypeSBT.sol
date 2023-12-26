@@ -3,11 +3,11 @@ pragma solidity 0.8.21;
 
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 
-import {BaseNFT} from "./BaseNFT.sol";
+import {BaseSBT} from "./BaseSBT.sol";
 
 error AlreadyAirdropped(address to);
 
-contract SingleTypeNFT is IERC4906, BaseNFT {
+contract SingleTypeSBT is IERC4906, BaseSBT {
     uint256 private constant _TOKEN_TYPE = 0;
 
     uint256 private _tokenIDCounter;
@@ -15,10 +15,10 @@ contract SingleTypeNFT is IERC4906, BaseNFT {
     mapping(address to => bool isAirdropped) private _isAirdroppeds;
 
     constructor()
-        BaseNFT(
+        BaseSBT(
             _msgSender(),
-            "Signle Type NFT",
-            "STNFT",
+            "Signle Type SBT",
+            "STSBT",
             _TOKEN_TYPE,
             _TOKEN_TYPE
         )

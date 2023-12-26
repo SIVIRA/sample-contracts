@@ -7,10 +7,10 @@ import { MultipleTypeNFT, MultipleTypeNFT__factory } from "../typechain-types";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
-const NFT_CONTRACT_NAME = "MultipleTypeNFT";
+const CONTRACT_NAME = "MultipleTypeNFT";
 const MAX_TOKEN_TYPE = 3;
 
-describe(NFT_CONTRACT_NAME, () => {
+describe(CONTRACT_NAME, () => {
   const DUMMY_PERIOD = 60;
 
   let runner: HardhatEthersSigner;
@@ -26,7 +26,7 @@ describe(NFT_CONTRACT_NAME, () => {
   });
 
   beforeEach(async () => {
-    nftFactory = await ethers.getContractFactory(NFT_CONTRACT_NAME);
+    nftFactory = await ethers.getContractFactory(CONTRACT_NAME);
     nft = await nftFactory.deploy(MAX_TOKEN_TYPE);
     await nft.waitForDeployment();
   });
