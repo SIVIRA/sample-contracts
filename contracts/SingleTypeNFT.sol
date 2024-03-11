@@ -3,11 +3,12 @@ pragma solidity 0.8.24;
 
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 
+import {IAirdroppable} from "./IAirdroppable.sol";
 import {BaseNFT} from "./BaseNFT.sol";
 
 error AlreadyAirdropped(address to);
 
-contract SingleTypeNFT is IERC4906, BaseNFT {
+contract SingleTypeNFT is IERC4906, IAirdroppable, BaseNFT {
     uint256 private constant _TOKEN_TYPE = 0;
 
     uint256 private _tokenIDCounter;
