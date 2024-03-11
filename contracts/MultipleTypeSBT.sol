@@ -7,7 +7,6 @@ import {IAirdroppableByType} from "./IAirdroppable.sol";
 import {BaseSBT} from "./BaseSBT.sol";
 
 error InvalidMaxTokenType(uint256 maxTokenType);
-
 error AlreadyAirdropped(uint256 tokenType, address to);
 
 contract MultipleTypeSBT is IERC4906, IAirdroppableByType, BaseSBT {

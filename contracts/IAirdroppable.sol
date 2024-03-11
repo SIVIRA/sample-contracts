@@ -8,3 +8,7 @@ interface IAirdroppable {
 interface IAirdroppableByType {
     function airdropByType(address to, uint256 tokenType) external;
 }
+
+interface IAirdroppableWithTokenURI {
+    function airdropWithTokenURI(address to, string calldata tokenURI) external;
+}
