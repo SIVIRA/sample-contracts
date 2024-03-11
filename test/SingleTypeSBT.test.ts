@@ -7,10 +7,10 @@ import { SingleTypeSBT, SingleTypeSBT__factory } from "../typechain-types";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
-const CONTRACT_NAME = "SingleTypeSBT";
+const SBT_CONTRACT_NAME = "SingleTypeSBT" as const;
 
-describe(CONTRACT_NAME, () => {
-  const DUMMY_PERIOD = 60;
+describe(SBT_CONTRACT_NAME, () => {
+  const DUMMY_PERIOD = 60 as const;
 
   let runner: HardhatEthersSigner;
   let minter: HardhatEthersSigner;
@@ -25,7 +25,7 @@ describe(CONTRACT_NAME, () => {
   });
 
   beforeEach(async () => {
-    sbtFactory = await ethers.getContractFactory(CONTRACT_NAME);
+    sbtFactory = await ethers.getContractFactory(SBT_CONTRACT_NAME);
     sbt = await sbtFactory.deploy();
     await sbt.waitForDeployment();
   });
@@ -100,7 +100,7 @@ describe(CONTRACT_NAME, () => {
   });
 
   describe("setBaseTokenURI", () => {
-    const BASE_TOKEN_URI = "https://sbt-metadata.world/";
+    const BASE_TOKEN_URI = "https://sbt-metadata.world/" as const;
 
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(sbt.connect(minter).setBaseTokenURI(BASE_TOKEN_URI))
@@ -153,8 +153,8 @@ describe(CONTRACT_NAME, () => {
   });
 
   describe("setTokenURI, freezeTokenURI", () => {
-    const BASE_TOKEN_URI = "https://sbt-metadata.world/";
-    const TOKEN_URI = "https://sbt-metadata.world/0x0";
+    const BASE_TOKEN_URI = "https://sbt-metadata.world/" as const;
+    const TOKEN_URI = "https://sbt-metadata.world/0x0" as const;
 
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(sbt.connect(minter).setTokenURI(0, TOKEN_URI))
