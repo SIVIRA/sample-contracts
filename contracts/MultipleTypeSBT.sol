@@ -3,13 +3,14 @@ pragma solidity 0.8.24;
 
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 
+import {IAirdroppableByType} from "./IAirdroppable.sol";
 import {BaseSBT} from "./BaseSBT.sol";
 
 error InvalidMaxTokenType(uint256 maxTokenType);
 
 error AlreadyAirdropped(uint256 tokenType, address to);
 
-contract MultipleTypeSBT is IERC4906, BaseSBT {
+contract MultipleTypeSBT is IERC4906, IAirdroppableByType, BaseSBT {
     uint256 private constant _MIN_TOKEN_TYPE = 1;
 
     uint256 private _tokenIDCounter;
