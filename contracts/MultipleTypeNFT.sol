@@ -7,7 +7,6 @@ import {IAirdroppableByType} from "./IAirdroppable.sol";
 import {BaseNFT} from "./BaseNFT.sol";
 
 error InvalidMaxTokenType(uint256 maxTokenType);
-
 error AlreadyAirdropped(uint256 tokenType, address to);
 
 contract MultipleTypeNFT is IERC4906, IAirdroppableByType, BaseNFT {
