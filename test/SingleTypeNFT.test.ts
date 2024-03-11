@@ -7,10 +7,10 @@ import { SingleTypeNFT, SingleTypeNFT__factory } from "../typechain-types";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
-const CONTRACT_NAME = "SingleTypeNFT";
+const NFT_CONTRACT_NAME = "SingleTypeNFT" as const;
 
-describe(CONTRACT_NAME, () => {
-  const DUMMY_PERIOD = 60;
+describe(NFT_CONTRACT_NAME, () => {
+  const DUMMY_PERIOD = 60 as const;
 
   let runner: HardhatEthersSigner;
   let minter: HardhatEthersSigner;
@@ -25,7 +25,7 @@ describe(CONTRACT_NAME, () => {
   });
 
   beforeEach(async () => {
-    nftFactory = await ethers.getContractFactory(CONTRACT_NAME);
+    nftFactory = await ethers.getContractFactory(NFT_CONTRACT_NAME);
     nft = await nftFactory.deploy();
     await nft.waitForDeployment();
   });
@@ -102,7 +102,7 @@ describe(CONTRACT_NAME, () => {
   });
 
   describe("setBaseTokenURI", () => {
-    const BASE_TOKEN_URI = "https://nft-metadata.world/";
+    const BASE_TOKEN_URI = "https://nft-metadata.world/" as const;
 
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(nft.connect(minter).setBaseTokenURI(BASE_TOKEN_URI))
@@ -155,8 +155,8 @@ describe(CONTRACT_NAME, () => {
   });
 
   describe("setTokenURI, freezeTokenURI", () => {
-    const BASE_TOKEN_URI = "https://nft-metadata.world/";
-    const TOKEN_URI = "https://nft-metadata.world/0x0";
+    const BASE_TOKEN_URI = "https://nft-metadata.world/" as const;
+    const TOKEN_URI = "https://nft-metadata.world/0x0" as const;
 
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(nft.connect(minter).setTokenURI(0, TOKEN_URI))
@@ -607,13 +607,13 @@ describe(CONTRACT_NAME, () => {
   });
 
   describe("setDefaultRoyalty, freezeRoyalty", () => {
-    const FEE_NUMERATOR = BigInt(300);
-    const FEE_DENOMINAGOR = BigInt(10000);
-    const SALE_PRICE = ethers.parseEther("1");
+    const feeNumerator = BigInt(300);
+    const feeDenominator = BigInt(10000);
+    const salePrice = ethers.parseEther("1");
 
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(
-        nft.connect(minter).setDefaultRoyalty(minter.address, FEE_NUMERATOR)
+        nft.connect(minter).setDefaultRoyalty(minter.address, feeNumerator)
       )
         .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
@@ -625,9 +625,9 @@ describe(CONTRACT_NAME, () => {
 
     it("success -> failure: RoyaltyFrozen", async () => {
       // setDefaultRoyalty: success
-      await nft.setDefaultRoyalty(minter.address, FEE_NUMERATOR);
+      await nft.setDefaultRoyalty(minter.address, feeNumerator);
 
-      await expect(nft.royaltyInfo(0, SALE_PRICE))
+      await expect(nft.royaltyInfo(0, salePrice))
         .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
         .withArgs(0);
 
@@ -641,9 +641,9 @@ describe(CONTRACT_NAME, () => {
       await nft.connect(minter).airdrop(holder1.address);
 
       {
-        const [receiver, amount] = await nft.royaltyInfo(0, SALE_PRICE);
+        const [receiver, amount] = await nft.royaltyInfo(0, salePrice);
         expect(receiver).to.equal(minter.address);
-        expect(amount).to.equal((SALE_PRICE * FEE_NUMERATOR) / FEE_DENOMINAGOR);
+        expect(amount).to.equal((salePrice * feeNumerator) / feeDenominator);
       }
 
       // freezeRoyalty: success
@@ -651,7 +651,7 @@ describe(CONTRACT_NAME, () => {
 
       // setDefaultRoyalty: failure: RoyaltyFrozen
       await expect(
-        nft.setDefaultRoyalty(minter.address, FEE_NUMERATOR)
+        nft.setDefaultRoyalty(minter.address, feeNumerator)
       ).to.be.revertedWithCustomError(nft, "RoyaltyFrozen");
 
       // freezeRoyalty: failure: RoyaltyFrozen

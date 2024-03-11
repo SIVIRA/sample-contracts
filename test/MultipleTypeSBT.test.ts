@@ -7,11 +7,11 @@ import { MultipleTypeSBT, MultipleTypeSBT__factory } from "../typechain-types";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
-const CONTRACT_NAME = "MultipleTypeSBT";
-const MAX_TOKEN_TYPE = 3;
+const SBT_CONTRACT_NAME = "MultipleTypeSBT" as const;
+const SBT_MAX_TOKEN_TYPE = 3 as const;
 
-describe(CONTRACT_NAME, () => {
-  const DUMMY_PERIOD = 60;
+describe(SBT_CONTRACT_NAME, () => {
+  const DUMMY_PERIOD = 60 as const;
 
   let runner: HardhatEthersSigner;
   let minter: HardhatEthersSigner;
@@ -26,8 +26,8 @@ describe(CONTRACT_NAME, () => {
   });
 
   beforeEach(async () => {
-    sbtFactory = await ethers.getContractFactory(CONTRACT_NAME);
-    sbt = await sbtFactory.deploy(MAX_TOKEN_TYPE);
+    sbtFactory = await ethers.getContractFactory(SBT_CONTRACT_NAME);
+    sbt = await sbtFactory.deploy(SBT_MAX_TOKEN_TYPE);
     await sbt.waitForDeployment();
   });
 
@@ -36,7 +36,7 @@ describe(CONTRACT_NAME, () => {
       expect(await sbt.owner()).to.equal(runner.address);
       expect(await sbt.paused()).to.be.true;
       expect(await sbt.minTokenType()).to.equal(1);
-      expect(await sbt.maxTokenType()).to.equal(MAX_TOKEN_TYPE);
+      expect(await sbt.maxTokenType()).to.equal(SBT_MAX_TOKEN_TYPE);
     });
   });
 
@@ -87,7 +87,7 @@ describe(CONTRACT_NAME, () => {
 
   describe("setMaxTokenType, freezeTokenTypeRange", async () => {
     it("failure: OwnableUnauthorizedAccount", async () => {
-      await expect(sbt.connect(minter).setMaxTokenType(MAX_TOKEN_TYPE + 1))
+      await expect(sbt.connect(minter).setMaxTokenType(SBT_MAX_TOKEN_TYPE + 1))
         .to.be.revertedWithCustomError(sbt, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
 
@@ -97,24 +97,24 @@ describe(CONTRACT_NAME, () => {
     });
 
     it("failure: InvalidMaxTokenType", async () => {
-      await expect(sbt.setMaxTokenType(MAX_TOKEN_TYPE - 1))
+      await expect(sbt.setMaxTokenType(SBT_MAX_TOKEN_TYPE - 1))
         .to.be.revertedWithCustomError(sbt, "InvalidMaxTokenType")
-        .withArgs(MAX_TOKEN_TYPE - 1);
+        .withArgs(SBT_MAX_TOKEN_TYPE - 1);
     });
 
     it("success -> failure: TokenTypeRangeFrozen", async () => {
       // setMaxTokenType: success
-      await sbt.setMaxTokenType(MAX_TOKEN_TYPE + 1);
+      await sbt.setMaxTokenType(SBT_MAX_TOKEN_TYPE + 1);
 
       expect(await sbt.minTokenType()).to.equal(1);
-      expect(await sbt.maxTokenType()).to.equal(MAX_TOKEN_TYPE + 1);
+      expect(await sbt.maxTokenType()).to.equal(SBT_MAX_TOKEN_TYPE + 1);
 
       // freezeTokenTypeRange: success
       await sbt.freezeTokenTypeRange();
 
       // setMaxTokenType: failure: TokenTypeRangeFrozen
       await expect(
-        sbt.setMaxTokenType(MAX_TOKEN_TYPE + 2)
+        sbt.setMaxTokenType(SBT_MAX_TOKEN_TYPE + 2)
       ).to.be.revertedWithCustomError(sbt, "TokenTypeRangeFrozen");
 
       // freezeTokenTypeRange: failure: TokenTypeRangeFrozen
@@ -126,7 +126,7 @@ describe(CONTRACT_NAME, () => {
   });
 
   describe("setBaseTokenURI", () => {
-    const BASE_TOKEN_URI = "https://sbt-metadata.world/";
+    const BASE_TOKEN_URI = "https://sbt-metadata.world/" as const;
 
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(sbt.connect(minter).setBaseTokenURI(BASE_TOKEN_URI))
@@ -179,8 +179,8 @@ describe(CONTRACT_NAME, () => {
   });
 
   describe("setTokenURI, freezeTokenURI", () => {
-    const BASE_TOKEN_URI = "https://sbt-metadata.world/";
-    const TOKEN_URI = "https://sbt-metadata.world/0x0";
+    const BASE_TOKEN_URI = "https://sbt-metadata.world/" as const;
+    const TOKEN_URI = "https://sbt-metadata.world/0x0" as const;
 
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(sbt.connect(minter).setTokenURI(0, TOKEN_URI))
@@ -272,10 +272,12 @@ describe(CONTRACT_NAME, () => {
         .to.be.revertedWithCustomError(sbt, "InvalidTokenType")
         .withArgs(0);
       await expect(
-        sbt.connect(minter).airdropByType(holder1.address, MAX_TOKEN_TYPE + 1)
+        sbt
+          .connect(minter)
+          .airdropByType(holder1.address, SBT_MAX_TOKEN_TYPE + 1)
       )
         .to.be.revertedWithCustomError(sbt, "InvalidTokenType")
-        .withArgs(MAX_TOKEN_TYPE + 1);
+        .withArgs(SBT_MAX_TOKEN_TYPE + 1);
     });
 
     it("success", async () => {
@@ -393,10 +395,10 @@ describe(CONTRACT_NAME, () => {
       await expect(
         sbt
           .connect(minter)
-          .bulkAirdropByType([holder1.address], MAX_TOKEN_TYPE + 1)
+          .bulkAirdropByType([holder1.address], SBT_MAX_TOKEN_TYPE + 1)
       )
         .to.be.revertedWithCustomError(sbt, "InvalidTokenType")
-        .withArgs(MAX_TOKEN_TYPE + 1);
+        .withArgs(SBT_MAX_TOKEN_TYPE + 1);
     });
 
     it("success", async () => {

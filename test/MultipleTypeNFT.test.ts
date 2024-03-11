@@ -7,11 +7,11 @@ import { MultipleTypeNFT, MultipleTypeNFT__factory } from "../typechain-types";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
-const CONTRACT_NAME = "MultipleTypeNFT";
-const MAX_TOKEN_TYPE = 3;
+const NFT_CONTRACT_NAME = "MultipleTypeNFT" as const;
+const NFT_MAX_TOKEN_TYPE = 3 as const;
 
-describe(CONTRACT_NAME, () => {
-  const DUMMY_PERIOD = 60;
+describe(NFT_CONTRACT_NAME, () => {
+  const DUMMY_PERIOD = 60 as const;
 
   let runner: HardhatEthersSigner;
   let minter: HardhatEthersSigner;
@@ -26,8 +26,8 @@ describe(CONTRACT_NAME, () => {
   });
 
   beforeEach(async () => {
-    nftFactory = await ethers.getContractFactory(CONTRACT_NAME);
-    nft = await nftFactory.deploy(MAX_TOKEN_TYPE);
+    nftFactory = await ethers.getContractFactory(NFT_CONTRACT_NAME);
+    nft = await nftFactory.deploy(NFT_MAX_TOKEN_TYPE);
     await nft.waitForDeployment();
   });
 
@@ -36,7 +36,7 @@ describe(CONTRACT_NAME, () => {
       expect(await nft.owner()).to.equal(runner.address);
       expect(await nft.paused()).to.be.true;
       expect(await nft.minTokenType()).to.equal(1);
-      expect(await nft.maxTokenType()).to.equal(MAX_TOKEN_TYPE);
+      expect(await nft.maxTokenType()).to.equal(NFT_MAX_TOKEN_TYPE);
     });
   });
 
@@ -89,7 +89,7 @@ describe(CONTRACT_NAME, () => {
 
   describe("setMaxTokenType, freezeTokenTypeRange", async () => {
     it("failure: OwnableUnauthorizedAccount", async () => {
-      await expect(nft.connect(minter).setMaxTokenType(MAX_TOKEN_TYPE + 1))
+      await expect(nft.connect(minter).setMaxTokenType(NFT_MAX_TOKEN_TYPE + 1))
         .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
 
@@ -99,24 +99,24 @@ describe(CONTRACT_NAME, () => {
     });
 
     it("failure: InvalidMaxTokenType", async () => {
-      await expect(nft.setMaxTokenType(MAX_TOKEN_TYPE - 1))
+      await expect(nft.setMaxTokenType(NFT_MAX_TOKEN_TYPE - 1))
         .to.be.revertedWithCustomError(nft, "InvalidMaxTokenType")
-        .withArgs(MAX_TOKEN_TYPE - 1);
+        .withArgs(NFT_MAX_TOKEN_TYPE - 1);
     });
 
     it("success -> failure: TokenTypeRangeFrozen", async () => {
       // setMaxTokenType: success
-      await nft.setMaxTokenType(MAX_TOKEN_TYPE + 1);
+      await nft.setMaxTokenType(NFT_MAX_TOKEN_TYPE + 1);
 
       expect(await nft.minTokenType()).to.equal(1);
-      expect(await nft.maxTokenType()).to.equal(MAX_TOKEN_TYPE + 1);
+      expect(await nft.maxTokenType()).to.equal(NFT_MAX_TOKEN_TYPE + 1);
 
       // freezeTokenTypeRange: success
       await nft.freezeTokenTypeRange();
 
       // setMaxTokenType: failure: TokenTypeRangeFrozen
       await expect(
-        nft.setMaxTokenType(MAX_TOKEN_TYPE + 2)
+        nft.setMaxTokenType(NFT_MAX_TOKEN_TYPE + 2)
       ).to.be.revertedWithCustomError(nft, "TokenTypeRangeFrozen");
 
       // freezeTokenTypeRange: failure: TokenTypeRangeFrozen
@@ -128,7 +128,7 @@ describe(CONTRACT_NAME, () => {
   });
 
   describe("setBaseTokenURI", () => {
-    const BASE_TOKEN_URI = "https://nft-metadata.world/";
+    const BASE_TOKEN_URI = "https://nft-metadata.world/" as const;
 
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(nft.connect(minter).setBaseTokenURI(BASE_TOKEN_URI))
@@ -181,8 +181,8 @@ describe(CONTRACT_NAME, () => {
   });
 
   describe("setTokenURI, freezeTokenURI", () => {
-    const BASE_TOKEN_URI = "https://nft-metadata.world/";
-    const TOKEN_URI = "https://nft-metadata.world/0x0";
+    const BASE_TOKEN_URI = "https://nft-metadata.world/" as const;
+    const TOKEN_URI = "https://nft-metadata.world/0x0" as const;
 
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(nft.connect(minter).setTokenURI(0, TOKEN_URI))
@@ -274,10 +274,12 @@ describe(CONTRACT_NAME, () => {
         .to.be.revertedWithCustomError(nft, "InvalidTokenType")
         .withArgs(0);
       await expect(
-        nft.connect(minter).airdropByType(holder1.address, MAX_TOKEN_TYPE + 1)
+        nft
+          .connect(minter)
+          .airdropByType(holder1.address, NFT_MAX_TOKEN_TYPE + 1)
       )
         .to.be.revertedWithCustomError(nft, "InvalidTokenType")
-        .withArgs(MAX_TOKEN_TYPE + 1);
+        .withArgs(NFT_MAX_TOKEN_TYPE + 1);
     });
 
     it("success", async () => {
@@ -418,10 +420,10 @@ describe(CONTRACT_NAME, () => {
       await expect(
         nft
           .connect(minter)
-          .bulkAirdropByType([holder1.address], MAX_TOKEN_TYPE + 1)
+          .bulkAirdropByType([holder1.address], NFT_MAX_TOKEN_TYPE + 1)
       )
         .to.be.revertedWithCustomError(nft, "InvalidTokenType")
-        .withArgs(MAX_TOKEN_TYPE + 1);
+        .withArgs(NFT_MAX_TOKEN_TYPE + 1);
     });
 
     it("success", async () => {
@@ -691,13 +693,13 @@ describe(CONTRACT_NAME, () => {
   });
 
   describe("setDefaultRoyalty, freezeRoyalty", () => {
-    const FEE_NUMERATOR = BigInt(300);
-    const FEE_DENOMINAGOR = BigInt(10000);
-    const SALE_PRICE = ethers.parseEther("1");
+    const feeNumerator = BigInt(300);
+    const feeDenominator = BigInt(10000);
+    const salePrice = ethers.parseEther("1");
 
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(
-        nft.connect(minter).setDefaultRoyalty(minter.address, FEE_NUMERATOR)
+        nft.connect(minter).setDefaultRoyalty(minter.address, feeNumerator)
       )
         .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
@@ -709,9 +711,9 @@ describe(CONTRACT_NAME, () => {
 
     it("success -> failure: RoyaltyFrozen", async () => {
       // setDefaultRoyalty: success
-      await nft.setDefaultRoyalty(minter.address, FEE_NUMERATOR);
+      await nft.setDefaultRoyalty(minter.address, feeNumerator);
 
-      await expect(nft.royaltyInfo(0, SALE_PRICE))
+      await expect(nft.royaltyInfo(0, salePrice))
         .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
         .withArgs(0);
 
@@ -725,9 +727,9 @@ describe(CONTRACT_NAME, () => {
       await nft.connect(minter).airdropByType(holder1.address, 1);
 
       {
-        const [receiver, amount] = await nft.royaltyInfo(0, SALE_PRICE);
+        const [receiver, amount] = await nft.royaltyInfo(0, salePrice);
         expect(receiver).to.equal(minter.address);
-        expect(amount).to.equal((SALE_PRICE * FEE_NUMERATOR) / FEE_DENOMINAGOR);
+        expect(amount).to.equal((salePrice * feeNumerator) / feeDenominator);
       }
 
       // freezeRoyalty: success
@@ -735,7 +737,7 @@ describe(CONTRACT_NAME, () => {
 
       // setDefaultRoyalty: failure: RoyaltyFrozen
       await expect(
-        nft.setDefaultRoyalty(minter.address, FEE_NUMERATOR)
+        nft.setDefaultRoyalty(minter.address, feeNumerator)
       ).to.be.revertedWithCustomError(nft, "RoyaltyFrozen");
 
       // freezeRoyalty: failure: RoyaltyFrozen
