@@ -14,16 +14,20 @@
     "@openzeppelin/contracts": "5.0.2"
   },
   "devDependencies": {
-    "@commitlint/cli": "19.0.3",
-    "@commitlint/config-conventional": "19.0.3",
-    "@nomicfoundation/hardhat-ethers": "3.0.5",
+    "@commitlint/cli": "19.2.1",
+    "@commitlint/config-conventional": "19.1.0",
     "@nomicfoundation/hardhat-network-helpers": "1.0.10",
-    "@nomicfoundation/hardhat-toolbox": "4.0.0",
+    "@nomicfoundation/hardhat-toolbox": "5.0.0",
+    "@types/chai": "4.3.13",
+    "@types/mocha": "10.0.6",
+    "@types/node": "20.11.30",
     "chai": "4.4.1",
     "commitizen": "4.3.0",
     "cz-conventional-changelog": "3.3.0",
     "ethers": "6.11.1",
-    "hardhat": "2.21.0",
-    "husky": "9.0.11"
+    "hardhat": "2.22.1",
+    "husky": "9.0.11",
+    "ts-node": "10.9.2",
+    "typescript": "5.4.2"
   }
 }
