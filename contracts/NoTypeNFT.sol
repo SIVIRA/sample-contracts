@@ -35,9 +35,7 @@ contract NoTypeNFT is IERC4906, IAirdroppableWithTokenURI, BaseNFT {
         address[] calldata tos_,
         string[] calldata tokenURIs_
     ) external onlyMinter whenNotPaused {
-        if (tos_.length != tokenURIs_.length) {
-            revert ArgumentLengthMismatch();
-        }
+        require(tos_.length == tokenURIs_.length, ArgumentLengthMismatch());
 
         for (uint256 i = 0; i < tos_.length; i++) {
             _requireNotAirdropped(tos_[i]);
@@ -57,9 +55,7 @@ contract NoTypeNFT is IERC4906, IAirdroppableWithTokenURI, BaseNFT {
     }
 
     function _requireNotAirdropped(address to_) private view {
-        if (_isAirdroppeds[to_]) {
-            revert AlreadyAirdropped(to_);
-        }
+        require(!_isAirdroppeds[to_], AlreadyAirdropped(to_));
     }
 
     function _mintedAmount() private view returns (uint256) {

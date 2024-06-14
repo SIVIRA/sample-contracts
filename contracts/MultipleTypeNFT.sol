@@ -32,9 +32,10 @@ contract MultipleTypeNFT is IERC4906, IAirdroppableByType, BaseNFT {
     function setMaxTokenType(uint256 maxTokenType_) external onlyOwner {
         _requireTokenTypeRangeNotFrozen();
 
-        if (maxTokenType_ < _maxTokenType) {
-            revert InvalidMaxTokenType(maxTokenType_);
-        }
+        require(
+            maxTokenType_ > _maxTokenType,
+            InvalidMaxTokenType(maxTokenType_)
+        );
 
         _maxTokenType = maxTokenType_;
     }
@@ -79,9 +80,10 @@ contract MultipleTypeNFT is IERC4906, IAirdroppableByType, BaseNFT {
         uint256 tokenType_,
         address to_
     ) private view {
-        if (_isAirdroppeds[tokenType_][to_]) {
-            revert AlreadyAirdropped(tokenType_, to_);
-        }
+        require(
+            !_isAirdroppeds[tokenType_][to_],
+            AlreadyAirdropped(tokenType_, to_)
+        );
     }
 
     function _mintedAmount() private view returns (uint256) {

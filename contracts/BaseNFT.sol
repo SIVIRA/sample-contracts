@@ -75,9 +75,7 @@ contract BaseNFT is
     bool internal _isMintersFrozen;
 
     modifier onlyMinter() {
-        if (!_minters[_msgSender()]) {
-            revert InvalidMinter(_msgSender());
-        }
+        require(_minters[_msgSender()], InvalidMinter(_msgSender()));
 
         _;
     }
@@ -89,9 +87,10 @@ contract BaseNFT is
         uint256 minTokenType_,
         uint256 maxTokenType_
     ) ERC721(name_, symbol_) Ownable(owner_) {
-        if (minTokenType_ > maxTokenType_) {
-            revert InvalidTokenTypeRange(minTokenType_, maxTokenType_);
-        }
+        require(
+            minTokenType_ <= maxTokenType_,
+            InvalidTokenTypeRange(minTokenType_, maxTokenType_)
+        );
 
         _pause();
 
@@ -146,9 +145,7 @@ contract BaseNFT is
         address owner_,
         uint256 tokenType_
     ) external view returns (uint256) {
-        if (owner_ == address(0)) {
-            revert ERC721InvalidOwner(address(0));
-        }
+        require(owner_ != address(0), ERC721InvalidOwner(address(0)));
 
         return _typeBalances[owner_][tokenType_];
     }
@@ -200,9 +197,8 @@ contract BaseNFT is
 
     function firstOwnerOf(uint256 tokenID_) external view returns (address) {
         address firstOwner = _firstOwners[tokenID_];
-        if (firstOwner == address(0)) {
-            revert ERC721NonexistentToken(tokenID_);
-        }
+
+        require(firstOwner != address(0), ERC721NonexistentToken(tokenID_));
 
         return firstOwner;
     }
@@ -270,12 +266,8 @@ contract BaseNFT is
     function addMinter(address minter_) external onlyOwner {
         _requireMintersNotFrozen();
 
-        if (minter_ == address(0)) {
-            revert InvalidMinter(address(0));
-        }
-        if (_minters[minter_]) {
-            revert MinterAlreadyAdded(minter_);
-        }
+        require(minter_ != address(0), InvalidMinter(address(0)));
+        require(!_minters[minter_], MinterAlreadyAdded(minter_));
 
         _minters[minter_] = true;
 
@@ -289,9 +281,7 @@ contract BaseNFT is
     function removeMinter(address minter_) external onlyOwner {
         _requireMintersNotFrozen();
 
-        if (!_minters[minter_]) {
-            revert InvalidMinter(minter_);
-        }
+        require(_minters[minter_], InvalidMinter(minter_));
 
         delete _minters[minter_];
 
@@ -305,33 +295,26 @@ contract BaseNFT is
     }
 
     function _requireTokenTypeRangeNotFrozen() internal view {
-        if (_isTokenTypeRangeFrozen) {
-            revert TokenTypeRangeFrozen();
-        }
+        require(!_isTokenTypeRangeFrozen, TokenTypeRangeFrozen());
     }
 
     function _requireTokenURINotFrozen(uint256 tokenID_) internal view {
-        if (_isTokenURIFrozens[tokenID_]) {
-            revert TokenURIFrozen(tokenID_);
-        }
+        require(!_isTokenURIFrozens[tokenID_], TokenURIFrozen(tokenID_));
     }
 
     function _requireRoyaltyNotFrozen() internal view {
-        if (_isRoyaltyFrozen) {
-            revert RoyaltyFrozen();
-        }
+        require(!_isRoyaltyFrozen, RoyaltyFrozen());
     }
 
     function _requireMintersNotFrozen() internal view {
-        if (_isMintersFrozen) {
-            revert MintersFrozen();
-        }
+        require(!_isMintersFrozen, MintersFrozen());
     }
 
     function _mint(address to_, uint256 tokenID_, uint256 tokenType_) internal {
-        if (tokenType_ < _minTokenType || _maxTokenType < tokenType_) {
-            revert InvalidTokenType(tokenType_);
-        }
+        require(
+            _minTokenType <= tokenType_ && tokenType_ <= _maxTokenType,
+            InvalidTokenType(tokenType_)
+        );
 
         _tokenTypes[tokenID_] = tokenType_;
 

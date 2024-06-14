@@ -60,9 +60,7 @@ contract SingleTypeSBT is IERC4906, IAirdroppable, BaseSBT {
     }
 
     function _requireNotAirdropped(address to_) private view {
-        if (_isAirdroppeds[to_]) {
-            revert AlreadyAirdropped(to_);
-        }
+        require(!_isAirdroppeds[to_], AlreadyAirdropped(to_));
     }
 
     function _mintedAmount() private view returns (uint256) {
