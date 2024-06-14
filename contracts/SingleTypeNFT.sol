@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity 0.8.26;
 
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 
@@ -60,9 +60,7 @@ contract SingleTypeNFT is IERC4906, IAirdroppable, BaseNFT {
     }
 
     function _requireNotAirdropped(address to_) private view {
-        if (_isAirdroppeds[to_]) {
-            revert AlreadyAirdropped(to_);
-        }
+        require(!_isAirdroppeds[to_], AlreadyAirdropped(to_));
     }
 
     function _mintedAmount() private view returns (uint256) {

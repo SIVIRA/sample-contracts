@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity 0.8.26;
 
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 
@@ -32,9 +32,10 @@ contract MultipleTypeSBT is IERC4906, IAirdroppableByType, BaseSBT {
     function setMaxTokenType(uint256 maxTokenType_) external onlyOwner {
         _requireTokenTypeRangeNotFrozen();
 
-        if (maxTokenType_ < _maxTokenType) {
-            revert InvalidMaxTokenType(maxTokenType_);
-        }
+        require(
+            maxTokenType_ > _maxTokenType,
+            InvalidMaxTokenType(maxTokenType_)
+        );
 
         _maxTokenType = maxTokenType_;
     }
@@ -79,9 +80,10 @@ contract MultipleTypeSBT is IERC4906, IAirdroppableByType, BaseSBT {
         uint256 tokenType_,
         address to_
     ) private view {
-        if (_isAirdroppeds[tokenType_][to_]) {
-            revert AlreadyAirdropped(tokenType_, to_);
-        }
+        require(
+            !_isAirdroppeds[tokenType_][to_],
+            AlreadyAirdropped(tokenType_, to_)
+        );
     }
 
     function _mintedAmount() private view returns (uint256) {
