@@ -33,20 +33,17 @@ contract SingleTypeSBT is IERC4906, IAirdroppableNFT, BaseSBT {
         _refreshMetadata();
     }
 
-    function airdrop(address to_) external override onlyMinter whenNotPaused {
+    function airdrop(address to_) external onlyMinter whenNotPaused {
         _requireNotAirdropped(to_);
 
         _airdrop(to_, _TOKEN_TYPE, "");
     }
 
-    function airdropByType(address, uint256) external pure override {
+    function airdropByType(address, uint256) external pure {
         revert IAirdroppableNFT.UnsupportedFunction();
     }
 
-    function airdropWithTokenURI(
-        address,
-        string calldata
-    ) external pure override {
+    function airdropWithTokenURI(address, string calldata) external pure {
         revert IAirdroppableNFT.UnsupportedFunction();
     }
 
