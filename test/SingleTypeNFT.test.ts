@@ -334,6 +334,22 @@ describe(NFT_CONTRACT_NAME, () => {
     });
   });
 
+  describe("airdropByType", () => {
+    it("failure: UnsupportedFunction", async () => {
+      await expect(
+        nft.connect(minter).airdropByType(holder1.address, 0)
+      ).to.be.revertedWithCustomError(nft, "UnsupportedFunction");
+    });
+  });
+
+  describe("airdropWithTokenURI", () => {
+    it("failure: UnsupportedFunction", async () => {
+      await expect(
+        nft.connect(minter).airdropWithTokenURI(holder1.address, "")
+      ).to.be.revertedWithCustomError(nft, "UnsupportedFunction");
+    });
+  });
+
   describe("bulkAirdrop", () => {
     it("failure: InvalidMinter", async () => {
       await expect(nft.connect(minter).bulkAirdrop([holder1.address]))

@@ -163,6 +163,22 @@ describe(SBT_CONTRACT_NAME, () => {
     });
   });
 
+  describe("airdrop", () => {
+    it("failure: UnsupportedFunction", async () => {
+      await expect(
+        sbt.connect(minter).airdrop(holder1.address)
+      ).to.be.revertedWithCustomError(sbt, "UnsupportedFunction");
+    });
+  });
+
+  describe("airdropByType", () => {
+    it("failure: UnsupportedFunction", async () => {
+      await expect(
+        sbt.connect(minter).airdropByType(holder1.address, 0)
+      ).to.be.revertedWithCustomError(sbt, "UnsupportedFunction");
+    });
+  });
+
   describe("airdropWithTokenURI", () => {
     const TOKEN_URI = "https://sbt-metadata.world/0x0" as const;
 

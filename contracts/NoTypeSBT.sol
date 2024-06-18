@@ -3,13 +3,13 @@ pragma solidity 0.8.26;
 
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 
-import {IAirdroppableWithTokenURI} from "./IAirdroppable.sol";
+import {IAirdroppableNFT} from "./IAirdroppableNFT.sol";
 import {BaseSBT} from "./BaseSBT.sol";
 
 error ArgumentLengthMismatch();
 error AlreadyAirdropped(address to);
 
-contract NoTypeSBT is IERC4906, IAirdroppableWithTokenURI, BaseSBT {
+contract NoTypeSBT is IERC4906, IAirdroppableNFT, BaseSBT {
     uint256 private constant _TOKEN_TYPE = 0;
 
     uint256 private _tokenIDCounter;
@@ -20,6 +20,14 @@ contract NoTypeSBT is IERC4906, IAirdroppableWithTokenURI, BaseSBT {
         BaseSBT(_msgSender(), "No Type SBT", "NTSBT", _TOKEN_TYPE, _TOKEN_TYPE)
     {
         _isTokenTypeRangeFrozen = true;
+    }
+
+    function airdrop(address) external pure {
+        revert IAirdroppableNFT.UnsupportedFunction();
+    }
+
+    function airdropByType(address, uint256) external pure {
+        revert IAirdroppableNFT.UnsupportedFunction();
     }
 
     function airdropWithTokenURI(

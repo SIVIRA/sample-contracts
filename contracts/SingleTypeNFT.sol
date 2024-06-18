@@ -3,12 +3,12 @@ pragma solidity 0.8.26;
 
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 
-import {IAirdroppable} from "./IAirdroppable.sol";
+import {IAirdroppableNFT} from "./IAirdroppableNFT.sol";
 import {BaseNFT} from "./BaseNFT.sol";
 
 error AlreadyAirdropped(address to);
 
-contract SingleTypeNFT is IERC4906, IAirdroppable, BaseNFT {
+contract SingleTypeNFT is IERC4906, IAirdroppableNFT, BaseNFT {
     uint256 private constant _TOKEN_TYPE = 0;
 
     uint256 private _tokenIDCounter;
@@ -37,6 +37,14 @@ contract SingleTypeNFT is IERC4906, IAirdroppable, BaseNFT {
         _requireNotAirdropped(to_);
 
         _airdrop(to_, _TOKEN_TYPE, "");
+    }
+
+    function airdropByType(address, uint256) external pure {
+        revert IAirdroppableNFT.UnsupportedFunction();
+    }
+
+    function airdropWithTokenURI(address, string calldata) external pure {
+        revert IAirdroppableNFT.UnsupportedFunction();
     }
 
     function bulkAirdrop(
