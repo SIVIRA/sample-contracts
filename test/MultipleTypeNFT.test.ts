@@ -245,6 +245,14 @@ describe(NFT_CONTRACT_NAME, () => {
     });
   });
 
+  describe("airdrop", () => {
+    it("failure: UnsupportedFunction", async () => {
+      await expect(
+        nft.connect(minter).airdrop(holder1.address)
+      ).to.be.revertedWithCustomError(nft, "UnsupportedFunction");
+    });
+  });
+
   describe("airdropByType", () => {
     it("failure: InvalidMinter", async () => {
       await expect(nft.connect(minter).airdropByType(holder1.address, 1))
@@ -386,6 +394,14 @@ describe(NFT_CONTRACT_NAME, () => {
       expect(await nft.ownerOf(1)).to.equal(holder1.address);
       expect(await nft.typeBalanceOf(holder1, 1)).to.equal(1);
       expect(await nft.typeBalanceOf(holder1, 2)).to.equal(1);
+    });
+  });
+
+  describe("airdropWithTokenURI", () => {
+    it("failure: UnsupportedFunction", async () => {
+      await expect(
+        nft.connect(minter).airdropWithTokenURI(holder1.address, "")
+      ).to.be.revertedWithCustomError(nft, "UnsupportedFunction");
     });
   });
 

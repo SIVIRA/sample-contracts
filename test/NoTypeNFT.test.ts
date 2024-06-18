@@ -165,6 +165,22 @@ describe(NFT_CONTRACT_NAME, () => {
     });
   });
 
+  describe("airdrop", () => {
+    it("failure: UnsupportedFunction", async () => {
+      await expect(
+        nft.connect(minter).airdrop(holder1.address)
+      ).to.be.revertedWithCustomError(nft, "UnsupportedFunction");
+    });
+  });
+
+  describe("airdropByType", () => {
+    it("failure: UnsupportedFunction", async () => {
+      await expect(
+        nft.connect(minter).airdropByType(holder1.address, 0)
+      ).to.be.revertedWithCustomError(nft, "UnsupportedFunction");
+    });
+  });
+
   describe("airdropWithTokenURI", () => {
     const TOKEN_URI = "https://nft-metadata.world/0x0" as const;
 

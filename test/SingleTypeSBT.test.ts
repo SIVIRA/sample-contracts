@@ -309,6 +309,22 @@ describe(SBT_CONTRACT_NAME, () => {
     });
   });
 
+  describe("airdropByType", () => {
+    it("failure: UnsupportedFunction", async () => {
+      await expect(
+        sbt.connect(minter).airdropByType(holder1.address, 0)
+      ).to.be.revertedWithCustomError(sbt, "UnsupportedFunction");
+    });
+  });
+
+  describe("airdropWithTokenURI", () => {
+    it("failure: UnsupportedFunction", async () => {
+      await expect(
+        sbt.connect(minter).airdropWithTokenURI(holder1.address, "")
+      ).to.be.revertedWithCustomError(sbt, "UnsupportedFunction");
+    });
+  });
+
   describe("bulkAirdrop", () => {
     it("failure: InvalidMinter", async () => {
       await expect(sbt.connect(minter).bulkAirdrop([holder1.address]))
