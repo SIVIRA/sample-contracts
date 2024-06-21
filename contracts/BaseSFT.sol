@@ -7,12 +7,19 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract BaseSFT is ERC1155, Ownable, Pausable {
+    error InvalidTokenIDRange(uint256 minTokenID, uint256 maxTokenID);
+    error TokenIDRangeFrozen();
+
     error InvalidMinter(address minter);
     error MinterAlreadyAdded(address minter);
     error MintersFrozen();
 
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
+
+    uint256 internal _minTokenID;
+    uint256 internal _maxTokenID;
+    bool internal _isTokenIDRangeFrozen;
 
     mapping(address minter => bool isMinter) internal _minters;
     bool internal _isMintersFrozen;
@@ -25,9 +32,14 @@ contract BaseSFT is ERC1155, Ownable, Pausable {
 
     constructor(
         address owner_,
-        string memory uri_
+        string memory uri_,
+        uint256 minTokenID_,
+        uint256 maxTokenID_
     ) ERC1155(uri_) Ownable(owner_) {
         _pause();
+
+        _minTokenID = minTokenID_;
+        _maxTokenID = maxTokenID_;
     }
 
     function pause() external onlyOwner {
@@ -69,7 +81,34 @@ contract BaseSFT is ERC1155, Ownable, Pausable {
         _isMintersFrozen = true;
     }
 
+    function minTokenID() external view returns (uint256) {
+        return _minTokenID;
+    }
+
+    function maxTokenID() external view returns (uint256) {
+        return _maxTokenID;
+    }
+
+    function _mint(address to_, uint256 tokenID_, uint256 amount) internal {
+        require(
+            tokenID_ >= _minTokenID && tokenID_ <= _maxTokenID,
+            InvalidTokenIDRange(_minTokenID, _maxTokenID)
+        );
+
+        _mint(to_, tokenID_, amount, "");
+    }
+
     function _requireMintersNotFrozen() internal view {
         require(!_isMintersFrozen, MintersFrozen());
+    }
+
+    function freezeTokenTypeRange() external onlyOwner {
+        _requireTokenTypeRangeNotFrozen();
+
+        _isTokenIDRangeFrozen = true;
+    }
+
+    function _requireTokenTypeRangeNotFrozen() internal view {
+        require(!_isTokenIDRangeFrozen, TokenIDRangeFrozen());
     }
 }
