@@ -13,4 +13,12 @@ contract BaseSFT is ERC1155, Ownable, Pausable {
     ) ERC1155(uri_) Ownable(owner_) {
         _pause();
     }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 }
