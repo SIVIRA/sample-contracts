@@ -21,15 +21,11 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
     error MintersFrozen();
 
     error InsufficientHolding(address holder, uint256 tokenID);
+    error InvalidHoldingThreshold();
     error HoldingThresholdsFrozen(uint256 tokenID);
 
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
-
-    struct UserInfo {
-        address user;
-        uint64 expires;
-    }
 
     uint256 internal _minTokenID;
     uint256 internal _maxTokenID;
@@ -144,6 +140,7 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
         uint256 threshold_
     ) external {
         _requireHoldingThresholdsNotFrozen(tokenID_);
+        require(threshold_ > 0, InvalidHoldingThreshold());
         _holdingThresholds[tokenID_] = threshold_;
     }
 
