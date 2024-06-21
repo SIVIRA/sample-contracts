@@ -16,6 +16,8 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
 
     error TokenURIFrozen(uint256 tokenID);
 
+    error RoyaltyFrozen();
+
     error NonexistentToken(uint256 tokenID);
 
     error InvalidMinter(address minter);
@@ -41,6 +43,8 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
 
     mapping(uint256 tokenID => string uri) internal _tokenURIs;
     mapping(uint256 tokenID => bool isFrozen) internal _isTokenURIFrozens;
+
+    bool internal _isRoyaltyFrozen;
 
     mapping(address minter => bool isMinter) internal _minters;
     bool internal _isMintersFrozen;
@@ -125,6 +129,21 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
         _requireExists(tokenID_);
 
         return super.royaltyInfo(tokenID_, salePrice_);
+    }
+
+    function setDefaultRoyalty(
+        address receiver_,
+        uint96 feeNumerator_
+    ) external onlyOwner {
+        _requireRoyaltyNotFrozen();
+
+        _setDefaultRoyalty(receiver_, feeNumerator_);
+    }
+
+    function freezeRoyalty() external onlyOwner {
+        _requireRoyaltyNotFrozen();
+
+        _isRoyaltyFrozen = true;
     }
 
     function uri(
@@ -215,6 +234,10 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
 
     function _requireExists(uint256 tokenID_) internal view {
         require(exists(tokenID_), NonexistentToken(tokenID_));
+    }
+
+    function _requireRoyaltyNotFrozen() internal view {
+        require(!_isRoyaltyFrozen, RoyaltyFrozen());
     }
 
     function _requireMintersNotFrozen() internal view {
