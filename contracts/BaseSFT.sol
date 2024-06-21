@@ -20,12 +20,26 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
     error MinterAlreadyAdded(address minter);
     error MintersFrozen();
 
+    error InsufficientHolding(address holder, uint256 tokenID);
+    error HoldingThresholdsFrozen(uint256 tokenID);
+
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
+
+    struct UserInfo {
+        address user;
+        uint64 expires;
+    }
 
     uint256 internal _minTokenID;
     uint256 internal _maxTokenID;
     bool internal _isTokenIDRangeFrozen;
+
+    mapping(uint256 tokenID => uint256 holdingThreshold)
+        internal _holdingThresholds;
+    mapping(uint256 tokenID => bool) internal _isHoldingThresholdFrozen;
+    mapping(address holder => mapping(uint256 tokenID => uint256 holdingStartedAt))
+        internal _holdingStartedAts;
 
     mapping(address minter => bool isMinter) internal _minters;
     bool internal _isMintersFrozen;
@@ -112,6 +126,27 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
         return super.royaltyInfo(tokenID_, salePrice_);
     }
 
+    function holdingPeriod(
+        address holder_,
+        uint256 tokenID_
+    ) external view returns (uint256) {
+        require(
+            _holdingThresholds[tokenID_] > 0 &&
+                balanceOf(holder_, tokenID_) >= _holdingThresholds[tokenID_],
+            InsufficientHolding(holder_, tokenID_)
+        );
+
+        return block.timestamp - _holdingStartedAts[holder_][tokenID_];
+    }
+
+    function setHoldingThreshold(
+        uint256 tokenID_,
+        uint256 threshold_
+    ) external {
+        _requireHoldingThresholdsNotFrozen(tokenID_);
+        _holdingThresholds[tokenID_] = threshold_;
+    }
+
     function _mint(address to_, uint256 tokenID_, uint256 amount) internal {
         require(
             tokenID_ >= _minTokenID && tokenID_ <= _maxTokenID,
@@ -119,6 +154,36 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
         );
 
         _mint(to_, tokenID_, amount, "");
+    }
+
+    function _update(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory values
+    ) internal override {
+        super._update(from, to, ids, values);
+
+        for (uint256 i = 0; i < ids.length; i++) {
+            uint256 tokenID = ids[i];
+            if (to != address(0)) {
+                if (
+                    balanceOf(to, tokenID) >= _holdingThresholds[tokenID] &&
+                    _holdingStartedAts[to][tokenID] == 0
+                ) {
+                    _holdingStartedAts[to][tokenID] = block.timestamp;
+                } else if (
+                    balanceOf(to, tokenID) < _holdingThresholds[tokenID]
+                ) {
+                    _holdingStartedAts[to][tokenID] = 0;
+                }
+            }
+            if (from != address(0)) {
+                if (balanceOf(from, tokenID) < _holdingThresholds[tokenID]) {
+                    _holdingStartedAts[from][tokenID] = 0;
+                }
+            }
+        }
     }
 
     function _requireExists(uint256 tokenID_) internal view {
@@ -137,5 +202,12 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
 
     function _requireTokenTypeRangeNotFrozen() internal view {
         require(!_isTokenIDRangeFrozen, TokenIDRangeFrozen());
+    }
+
+    function _requireHoldingThresholdsNotFrozen(uint256 tokenID) internal view {
+        require(
+            !_isHoldingThresholdFrozen[tokenID],
+            HoldingThresholdsFrozen(tokenID)
+        );
     }
 }
