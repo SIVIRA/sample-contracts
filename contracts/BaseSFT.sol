@@ -4,14 +4,17 @@ pragma solidity 0.8.26;
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract BaseSFT is IERC165, ERC1155, ERC2981, Ownable, Pausable {
+contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
     error InvalidTokenIDRange(uint256 minTokenID, uint256 maxTokenID);
     error TokenIDRangeFrozen();
+
+    error NonexistentToken(uint256 tokenID);
 
     error InvalidMinter(address minter);
     error MinterAlreadyAdded(address minter);
@@ -104,6 +107,8 @@ contract BaseSFT is IERC165, ERC1155, ERC2981, Ownable, Pausable {
         uint256 tokenID_,
         uint256 salePrice_
     ) public view override returns (address, uint256) {
+        _requireExists(tokenID_);
+
         return super.royaltyInfo(tokenID_, salePrice_);
     }
 
@@ -114,6 +119,10 @@ contract BaseSFT is IERC165, ERC1155, ERC2981, Ownable, Pausable {
         );
 
         _mint(to_, tokenID_, amount, "");
+    }
+
+    function _requireExists(uint256 tokenID_) internal view {
+        require(exists(tokenID_), NonexistentToken(tokenID_));
     }
 
     function _requireMintersNotFrozen() internal view {
