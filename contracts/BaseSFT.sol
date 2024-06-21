@@ -14,6 +14,8 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
     error InvalidTokenIDRange(uint256 minTokenID, uint256 maxTokenID);
     error TokenIDRangeFrozen();
 
+    error TokenURIFrozen(uint256 tokenID);
+
     error NonexistentToken(uint256 tokenID);
 
     error InvalidMinter(address minter);
@@ -36,6 +38,9 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
     mapping(uint256 tokenID => bool) internal _isHoldingThresholdFrozen;
     mapping(address holder => mapping(uint256 tokenID => uint256 holdingStartedAt))
         internal _holdingStartedAts;
+
+    mapping(uint256 tokenID => string uri) internal _tokenURIs;
+    mapping(uint256 tokenID => bool isFrozen) internal _isTokenURIFrozens;
 
     mapping(address minter => bool isMinter) internal _minters;
     bool internal _isMintersFrozen;
@@ -122,6 +127,31 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
         return super.royaltyInfo(tokenID_, salePrice_);
     }
 
+    function uri(
+        uint256 tokenID_
+    ) public view override returns (string memory) {
+        _requireExists(tokenID_);
+
+        string memory tokenURI = _tokenURIs[tokenID_];
+        if (bytes(tokenURI).length > 0) {
+            return tokenURI;
+        }
+
+        return super.uri(tokenID_);
+    }
+
+    function setTokenURI(
+        uint256 tokenID_,
+        string calldata uri_
+    ) external onlyOwner {
+        _requireExists(tokenID_);
+        _requireTokenURINotFrozen(tokenID_);
+
+        _tokenURIs[tokenID_] = uri_;
+
+        emit URI(uri_, tokenID_);
+    }
+
     function holdingPeriod(
         address holder_,
         uint256 tokenID_
@@ -199,6 +229,10 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
 
     function _requireTokenTypeRangeNotFrozen() internal view {
         require(!_isTokenIDRangeFrozen, TokenIDRangeFrozen());
+    }
+
+    function _requireTokenURINotFrozen(uint256 tokenID_) internal view {
+        require(!_isTokenURIFrozens[tokenID_], TokenURIFrozen(tokenID_));
     }
 
     function _requireHoldingThresholdsNotFrozen(uint256 tokenID) internal view {
