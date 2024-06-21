@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
+
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract BaseSFT is ERC1155, Ownable, Pausable {
+contract BaseSFT is IERC165, ERC1155, ERC2981, Ownable, Pausable {
     error InvalidTokenIDRange(uint256 minTokenID, uint256 maxTokenID);
     error TokenIDRangeFrozen();
 
@@ -40,6 +43,14 @@ contract BaseSFT is ERC1155, Ownable, Pausable {
 
         _minTokenID = minTokenID_;
         _maxTokenID = maxTokenID_;
+
+        _setDefaultRoyalty(owner_, 0);
+    }
+
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(IERC165, ERC1155, ERC2981) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 
     function pause() external onlyOwner {
@@ -87,6 +98,13 @@ contract BaseSFT is ERC1155, Ownable, Pausable {
 
     function maxTokenID() external view returns (uint256) {
         return _maxTokenID;
+    }
+
+    function royaltyInfo(
+        uint256 tokenID_,
+        uint256 salePrice_
+    ) public view override returns (address, uint256) {
+        return super.royaltyInfo(tokenID_, salePrice_);
     }
 
     function _mint(address to_, uint256 tokenID_, uint256 amount) internal {
