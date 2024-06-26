@@ -28,6 +28,9 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
     error InvalidHoldingThreshold();
     error HoldingThresholdsFrozen(uint256 tokenID);
 
+    // indicate to OpenSea that an NFT's metadata is frozen
+    event PermanentURI(string uri, uint256 indexed tokenID);
+
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
 
@@ -258,6 +261,8 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
         _requireTokenURINotFrozen(tokenID_);
 
         _isTokenURIFrozens[tokenID_] = true;
+
+        emit PermanentURI(_tokenURIs[tokenID_], tokenID_);
     }
 
     function _requireTokenIDRangeNotFrozen() internal view {
