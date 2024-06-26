@@ -253,6 +253,13 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
         _isTokenIDRangeFrozen = true;
     }
 
+    function freezeTokenURI(uint256 tokenID_) external onlyOwner {
+        _requireExists(tokenID_);
+        _requireTokenURINotFrozen(tokenID_);
+
+        _isTokenURIFrozens[tokenID_] = true;
+    }
+
     function _requireTokenIDRangeNotFrozen() internal view {
         require(!_isTokenIDRangeFrozen, TokenIDRangeFrozen());
     }
