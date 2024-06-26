@@ -38,7 +38,7 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
     mapping(uint256 tokenID => uint256 holdingThreshold)
         internal _holdingThresholds;
     mapping(uint256 tokenID => bool) internal _isHoldingThresholdFrozen;
-    mapping(address holder => mapping(uint256 tokenID => uint256 holdingStartedAt))
+    mapping(uint256 tokenID => mapping(address holder => uint256 holdingStartedAt))
         internal _holdingStartedAts;
 
     mapping(uint256 tokenID => string uri) internal _tokenURIs;
@@ -181,7 +181,7 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
             InsufficientBalance(holder_, tokenID_)
         );
 
-        return block.timestamp - _holdingStartedAts[holder_][tokenID_];
+        return block.timestamp - _holdingStartedAts[tokenID_][holder_];
     }
 
     function setHoldingThreshold(
@@ -212,21 +212,24 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
 
         for (uint256 i = 0; i < ids.length; i++) {
             uint256 tokenID = ids[i];
+            if (_holdingThresholds[tokenID] == 0) {
+                continue;
+            }
             if (to != address(0)) {
                 if (
                     balanceOf(to, tokenID) >= _holdingThresholds[tokenID] &&
-                    _holdingStartedAts[to][tokenID] == 0
+                    _holdingStartedAts[tokenID][to] == 0
                 ) {
-                    _holdingStartedAts[to][tokenID] = block.timestamp;
+                    _holdingStartedAts[tokenID][to] = block.timestamp;
                 } else if (
                     balanceOf(to, tokenID) < _holdingThresholds[tokenID]
                 ) {
-                    _holdingStartedAts[to][tokenID] = 0;
+                    _holdingStartedAts[tokenID][to] = 0;
                 }
             }
             if (from != address(0)) {
                 if (balanceOf(from, tokenID) < _holdingThresholds[tokenID]) {
-                    _holdingStartedAts[from][tokenID] = 0;
+                    _holdingStartedAts[tokenID][from] = 0;
                 }
             }
         }
