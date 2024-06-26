@@ -7,10 +7,9 @@ import {BaseSFT} from "./BaseSFT.sol";
 contract SampleSFT is BaseSFT, IAirdroppableSFT {
     constructor(
         address owner_,
-        string memory uri_,
         uint256 minTokenID_,
         uint256 maxTokenID_
-    ) BaseSFT(owner_, uri_, minTokenID_, maxTokenID_) {}
+    ) BaseSFT(owner_, "", minTokenID_, maxTokenID_) {}
 
     function airdrop(
         address to,
