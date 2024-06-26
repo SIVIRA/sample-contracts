@@ -21,12 +21,7 @@ describe(SFT_CONTRACT_NAME, () => {
 
   beforeEach(async () => {
     sftFactory = await ethers.getContractFactory(SFT_CONTRACT_NAME);
-    sft = await sftFactory.deploy(
-      runner.address,
-      "https://example.com/tokens/{id}.json",
-      0,
-      10
-    );
+    sft = await sftFactory.deploy(runner.address, 0, 10);
     await sft.waitForDeployment();
   });
 
