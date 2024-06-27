@@ -5,7 +5,6 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { SampleSFT, SampleSFT__factory } from "../typechain-types";
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
-import * as utils from "./utils";
 
 const SFT_CONTRACT_NAME = "SampleSFT" as const;
 
