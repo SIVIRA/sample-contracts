@@ -25,6 +25,34 @@ describe(SFT_CONTRACT_NAME, () => {
     await sft.waitForDeployment();
   });
 
+  describe("initial state", () => {
+    it("success");
+  });
+
+  describe("supportsInterface", () => {
+    it("success");
+  });
+
+  describe("pausable", () => {
+    it("all");
+  });
+
+  describe("tokenIDRange", () => {
+    describe("freezeTokenIDRange", () => {
+      it("failure: OwnableUnauthorizedAccount");
+
+      it("failure: TokenIDRangeFrozen");
+    });
+  });
+
+  describe("tokenURI", () => {
+    it("failure: OwnableUnauthorizedAccount");
+
+    it("failure: NonexistentTokenID");
+
+    it("success -> failure: TokenURIFrozen");
+  });
+
   describe("airdrop", () => {
     it("success", async () => {
       await sft.unpause();
@@ -39,5 +67,29 @@ describe(SFT_CONTRACT_NAME, () => {
     it("failure: not minter");
 
     it("failure: token id is not in range");
+  });
+
+  describe("safeTransferFrom", () => {
+    it("success");
+  })
+
+  describe("royalty", () => {
+    it("failure: OwnableUnauthorizedAccount");
+
+    it("success -> failure: RoyaltyFrozen");
+  })
+
+  describe("minter", () => {
+    it("all");
+  })
+
+  describe("holding", () => {
+    describe("holdingPeriod", () => {
+      it("all");
+    });
+
+    describe("update holding threshold", () => {
+      it("all");
+    });
   });
 });
