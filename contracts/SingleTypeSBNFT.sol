@@ -4,12 +4,11 @@ pragma solidity 0.8.26;
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 
 import {IAirdroppableNFT} from "./IAirdroppableNFT.sol";
-import {BaseSBT} from "./BaseSBT.sol";
+import {BaseSBNFT} from "./BaseSBNFT.sol";
 
-error ArgumentLengthMismatch();
 error AlreadyAirdropped(address to);
 
-contract NoTypeSBT is IERC4906, IAirdroppableNFT, BaseSBT {
+contract SingleTypeSBNFT is IERC4906, IAirdroppableNFT, BaseSBNFT {
     uint256 private constant _TOKEN_TYPE = 0;
 
     uint256 private _tokenIDCounter;
@@ -17,38 +16,44 @@ contract NoTypeSBT is IERC4906, IAirdroppableNFT, BaseSBT {
     mapping(address to => bool isAirdropped) private _isAirdroppeds;
 
     constructor()
-        BaseSBT(_msgSender(), "No Type SBT", "NTSBT", _TOKEN_TYPE, _TOKEN_TYPE)
+        BaseSBNFT(
+            _msgSender(),
+            "Signle Type SBNFT",
+            "STSBNFT",
+            _TOKEN_TYPE,
+            _TOKEN_TYPE
+        )
     {
         _isTokenTypeRangeFrozen = true;
     }
 
-    function airdrop(address) external pure {
-        revert IAirdroppableNFT.UnsupportedFunction();
+    function setBaseTokenURI(string calldata uri_) external onlyOwner {
+        _baseTokenURI = uri_;
+
+        _refreshMetadata();
+    }
+
+    function airdrop(address to_) external onlyMinter whenNotPaused {
+        _requireNotAirdropped(to_);
+
+        _airdrop(to_, _TOKEN_TYPE, "");
     }
 
     function airdropByType(address, uint256) external pure {
         revert IAirdroppableNFT.UnsupportedFunction();
     }
 
-    function airdropWithTokenURI(
-        address to_,
-        string calldata tokenURI_
-    ) external onlyMinter whenNotPaused {
-        _requireNotAirdropped(to_);
-
-        _airdrop(to_, _TOKEN_TYPE, tokenURI_);
+    function airdropWithTokenURI(address, string calldata) external pure {
+        revert IAirdroppableNFT.UnsupportedFunction();
     }
 
-    function bulkAirdropWithTokenURI(
-        address[] calldata tos_,
-        string[] calldata tokenURIs_
+    function bulkAirdrop(
+        address[] calldata tos_
     ) external onlyMinter whenNotPaused {
-        require(tos_.length == tokenURIs_.length, ArgumentLengthMismatch());
-
         for (uint256 i = 0; i < tos_.length; i++) {
             _requireNotAirdropped(tos_[i]);
 
-            _airdrop(tos_[i], _TOKEN_TYPE, tokenURIs_[i]);
+            _airdrop(tos_[i], _TOKEN_TYPE, "");
         }
     }
 

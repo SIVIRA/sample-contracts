@@ -4,12 +4,12 @@ pragma solidity 0.8.26;
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 
 import {IAirdroppableNFT} from "./IAirdroppableNFT.sol";
-import {BaseSBT} from "./BaseSBT.sol";
+import {BaseSBNFT} from "./BaseSBNFT.sol";
 
 error InvalidMaxTokenType(uint256 maxTokenType);
 error AlreadyAirdropped(uint256 tokenType, address to);
 
-contract MultipleTypeSBT is IERC4906, IAirdroppableNFT, BaseSBT {
+contract MultipleTypeSBNFT is IERC4906, IAirdroppableNFT, BaseSBNFT {
     uint256 private constant _MIN_TOKEN_TYPE = 1;
 
     uint256 private _tokenIDCounter;
@@ -20,10 +20,10 @@ contract MultipleTypeSBT is IERC4906, IAirdroppableNFT, BaseSBT {
     constructor(
         uint256 maxTokenType_
     )
-        BaseSBT(
+        BaseSBNFT(
             _msgSender(),
-            "Multiple Type SBT",
-            "MTSBT",
+            "Multiple Type SBNFT",
+            "MTSBNFT",
             _MIN_TOKEN_TYPE,
             maxTokenType_
         )

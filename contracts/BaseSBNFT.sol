@@ -13,7 +13,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
-contract BaseSBT is IERC4906, ERC721Enumerable, Ownable, Pausable {
+contract BaseSBNFT is IERC4906, ERC721Enumerable, Ownable, Pausable {
     using Strings for uint256;
 
     error InvalidTokenTypeRange(uint256 minTokenType, uint256 maxTokenType);
