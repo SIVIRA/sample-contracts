@@ -81,9 +81,9 @@ describe(SFT_CONTRACT_NAME, () => {
 
   describe("freezeTokenIDRange", () => {
     it("failure: OwnableUnauthorizedAccount", async () => {
-      await expect(sft.connect(minter).freezeTokenIDRange()).
-      to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount").
-      withArgs(minter.address);
+      await expect(sft.connect(minter).freezeTokenIDRange())
+        .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
     });
 
     it("failure: TokenIDRangeFrozen", async () => {
@@ -91,13 +91,15 @@ describe(SFT_CONTRACT_NAME, () => {
       await expect(sft.freezeTokenIDRange()).to.be.revertedWithCustomError(
         sft,
         "TokenIDRangeFrozen"
-      )
+      );
     });
   });
 
   describe("tokenURI", () => {
     it("failure: OwnableUnauthorizedAccount", async () => {
-      await expect(sft.connect(minter).setTokenURI(0, "https://example.com/tokens/0.json"))
+      await expect(
+        sft.connect(minter).setTokenURI(0, "https://example.com/tokens/0.json")
+      )
         .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
 
@@ -116,10 +118,11 @@ describe(SFT_CONTRACT_NAME, () => {
       await sft.unpause();
       await sft.addMinter(minter.address);
       await sft.connect(minter).airdrop(holder1.address, 1, 1);
+      expect(await sft.uri(1)).to.equal("");
       await sft.setTokenURI(1, "https://example.com/tokens/1.json");
       expect(await sft.uri(1)).to.equal("https://example.com/tokens/1.json");
 
-      const updatedUri = "https://updated.com/tokens/1.json"
+      const updatedUri = "https://updated.com/tokens/1.json";
       await expect(sft.setTokenURI(1, updatedUri))
         .to.emit(sft, "URI")
         .withArgs(updatedUri, 1);
@@ -165,6 +168,13 @@ describe(SFT_CONTRACT_NAME, () => {
         .to.be.revertedWithCustomError(sft, "InvalidTokenIDRange")
         .withArgs(0, 10);
     });
+
+    it("failure: paused", async () => {
+      await sft.addMinter(minter.address);
+      await expect(
+        sft.connect(minter).airdrop(holder1.address, 1, 1)
+      ).to.be.revertedWithCustomError(sft, "EnforcedPause");
+    });
   });
 
   describe("safeTransferFrom", () => {
@@ -175,11 +185,29 @@ describe(SFT_CONTRACT_NAME, () => {
       await sft.connect(minter).airdrop(holder1.address, 1, 1);
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
 
-      await sft.connect(holder1).safeTransferFrom(holder1.address, holder2.address, 1, 1, "0x");
+      await sft
+        .connect(holder1)
+        .safeTransferFrom(holder1.address, holder2.address, 1, 1, "0x");
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(0);
       expect(await sft.balanceOf(holder2.address, 1)).to.equal(1);
     });
-  })
+
+    it("failure: cannot burn", async () => {
+      await sft.unpause();
+      await sft.addMinter(minter.address);
+
+      await sft.connect(minter).airdrop(holder1.address, 1, 1);
+      expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
+
+      await expect(
+        sft
+          .connect(holder1)
+          .safeTransferFrom(holder1.address, ethers.ZeroAddress, 1, 1, "0x")
+      )
+        .to.be.revertedWithCustomError(sft, "ERC1155InvalidReceiver")
+        .withArgs(ethers.ZeroAddress);
+    });
+  });
 
   describe("royalty", () => {
     const feeNumerator = BigInt(300);
@@ -235,7 +263,7 @@ describe(SFT_CONTRACT_NAME, () => {
         "RoyaltyFrozen"
       );
     });
-  })
+  });
 
   describe("minter", () => {
     it("all", async () => {
@@ -305,10 +333,10 @@ describe(SFT_CONTRACT_NAME, () => {
         "MintersFrozen"
       );
     });
-  })
+  });
 
   describe("holding", () => {
-    it("all", async () => {
+    it("airdrop and raise threshold", async () => {
       await sft.unpause();
       await sft.addMinter(minter.address);
 
@@ -329,10 +357,86 @@ describe(SFT_CONTRACT_NAME, () => {
       await helpers.time.increase(1000);
       expect(await sft.holdingPeriod(holder1, 1)).to.equal(1000);
 
-      await sft.connect(holder1).safeTransferFrom(holder1.address, holder2.address, 1, 1, "0x");
+      await sft
+        .connect(holder1)
+        .safeTransferFrom(holder1.address, holder2.address, 1, 1, "0x");
       await expect(sft.holdingPeriod(holder1, 1))
         .to.be.revertedWithCustomError(sft, "InsufficientBalance")
         .withArgs(holder1.address, 1);
+    });
+
+    it("transfer tokens", async () => {
+      await sft.unpause();
+      await sft.addMinter(minter.address);
+
+      expect(await sft.balanceOf(holder1.address, 1)).to.equal(0);
+      expect(await sft.balanceOf(holder2.address, 1)).to.equal(0);
+      await sft.setHoldingThreshold(1, 2);
+
+      await sft.connect(minter).airdrop(holder1.address, 1, 3);
+      expect(await sft.balanceOf(holder1.address, 1)).to.equal(3);
+      await helpers.time.increase(1000);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(1000);
+
+      await sft
+        .connect(holder1)
+        .safeTransferFrom(holder1.address, holder2.address, 1, 1, "0x");
+      expect(await sft.balanceOf(holder1.address, 1)).to.equal(2);
+      expect(await sft.balanceOf(holder2.address, 1)).to.equal(1);
+      await helpers.time.increase(1000);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(2001);
+      await expect(sft.holdingPeriod(holder2, 1))
+        .to.be.revertedWithCustomError(sft, "InsufficientBalance")
+        .withArgs(holder2.address, 1);
+
+      await sft
+        .connect(holder1)
+        .safeTransferFrom(holder1.address, holder2.address, 1, 1, "0x");
+      expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
+      expect(await sft.balanceOf(holder2.address, 1)).to.equal(2);
+      await helpers.time.increase(1000);
+      await expect(sft.holdingPeriod(holder1, 1))
+        .to.be.revertedWithCustomError(sft, "InsufficientBalance")
+        .withArgs(holder1.address, 1);
+      expect(await sft.holdingPeriod(holder2, 1)).to.equal(1000);
+
+      await sft.connect(minter).airdrop(holder2.address, 1, 1);
+      expect(await sft.balanceOf(holder2.address, 1)).to.equal(3);
+      expect(await sft.holdingPeriod(holder2, 1)).to.equal(1001);
+    });
+
+    describe("setHodlingThreshold", () => {
+      it("failure: OwnableUnauthorizedAccount", async () => {
+        await expect(sft.connect(minter).setHoldingThreshold(1, 2))
+          .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
+          .withArgs(minter.address);
+      });
+
+      it("failure: InvalidHoldingThreshold", async () => {
+        await expect(
+          sft.setHoldingThreshold(1, 0)
+        ).to.be.revertedWithCustomError(sft, "InvalidHoldingThreshold");
+      });
+
+      it("failure: HoldingThresholdFrozen", async () => {
+        await sft.unpause();
+        await sft.addMinter(minter.address);
+        await sft.connect(minter).airdrop(holder1.address, 1, 1);
+        await sft.setHoldingThreshold(1, 2);
+        await sft.freezeHoldingThreshold(1);
+
+        await expect(sft.setHoldingThreshold(1, 3))
+          .to.be.revertedWithCustomError(sft, "HoldingThresholdFrozen")
+          .withArgs(1);
+      });
+    });
+
+    describe("freezeHoldingThreshold", () => {
+      it("failure: OwnableUnauthorizedAccount", async () => {
+        await expect(sft.connect(minter).freezeHoldingThreshold(1))
+          .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
+          .withArgs(minter.address);
+      });
     });
   });
 });
