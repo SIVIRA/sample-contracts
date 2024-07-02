@@ -191,22 +191,6 @@ describe(SFT_CONTRACT_NAME, () => {
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(0);
       expect(await sft.balanceOf(holder2.address, 1)).to.equal(1);
     });
-
-    it("failure: cannot burn", async () => {
-      await sft.unpause();
-      await sft.addMinter(minter.address);
-
-      await sft.connect(minter).airdrop(holder1.address, 1, 1);
-      expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
-
-      await expect(
-        sft
-          .connect(holder1)
-          .safeTransferFrom(holder1.address, ethers.ZeroAddress, 1, 1, "0x")
-      )
-        .to.be.revertedWithCustomError(sft, "ERC1155InvalidReceiver")
-        .withArgs(ethers.ZeroAddress);
-    });
   });
 
   describe("royalty", () => {
@@ -403,6 +387,15 @@ describe(SFT_CONTRACT_NAME, () => {
       await sft.connect(minter).airdrop(holder2.address, 1, 1);
       expect(await sft.balanceOf(holder2.address, 1)).to.equal(3);
       expect(await sft.holdingPeriod(holder2, 1)).to.equal(1001);
+
+      await sft.connect(holder2).burn(holder2.address, 1, 1);
+      expect(await sft.balanceOf(holder2.address, 1)).to.equal(2);
+      expect(await sft.holdingPeriod(holder2, 1)).to.equal(1002);
+      await sft.connect(holder2).burn(holder2.address, 1, 1);
+      expect(await sft.balanceOf(holder2.address, 1)).to.equal(1);
+      await expect(sft.holdingPeriod(holder2, 1))
+        .to.be.revertedWithCustomError(sft, "InsufficientBalance")
+        .withArgs(holder2.address, 1);
     });
 
     describe("setHodlingThreshold", () => {
