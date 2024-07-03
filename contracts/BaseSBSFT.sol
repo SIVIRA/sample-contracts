@@ -71,8 +71,6 @@ contract BaseSBSFT is
         string memory uri_
     ) ERC1155(uri_) Ownable(owner_) {
         _pause();
-
-        _setDefaultRoyalty(owner_, 0);
     }
 
     function supportsInterface(
@@ -139,15 +137,6 @@ contract BaseSBSFT is
         _holdingThresholds[tokenID_] = holdingThreshold_;
 
         emit TokenRegistered(tokenID_, uri(tokenID_), holdingThreshold_);
-    }
-
-    function royaltyInfo(
-        uint256 tokenID_,
-        uint256 salePrice_
-    ) public view override returns (address, uint256) {
-        _requireRegisteredToken(tokenID_);
-
-        return super.royaltyInfo(tokenID_, salePrice_);
     }
 
     function uri(
