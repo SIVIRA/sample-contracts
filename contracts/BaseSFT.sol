@@ -20,7 +20,7 @@ contract BaseSFT is
     Pausable
 {
     error InvalidTokenIDRange(uint256 minTokenID, uint256 maxTokenID);
-    error TokenIDRangeFrozen();
+    error TokenIDAdditionFrozen();
 
     error TokenURIFrozen(uint256 tokenID);
 
@@ -34,7 +34,8 @@ contract BaseSFT is
 
     error InsufficientBalance(address holder, uint256 tokenID);
     error InvalidHoldingThreshold();
-    error HoldingThresholdFrozen(uint256 tokenID);
+
+    event TokenAdded(uint256 tokenID, string uri, uint256 holdingThreshold);
 
     // indicate to OpenSea that an NFT's metadata is frozen
     event PermanentURI(string uri, uint256 indexed tokenID);
@@ -42,9 +43,8 @@ contract BaseSFT is
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
 
-    uint256 internal _minTokenID;
-    uint256 internal _maxTokenID;
-    bool internal _isTokenIDRangeFrozen;
+    uint256 internal _maxTokenID; // 0 means no available tokens
+    bool internal _isTokenIDAdditionFrozen;
 
     mapping(uint256 tokenID => uint256 holdingThreshold)
         internal _holdingThresholds;
@@ -68,14 +68,9 @@ contract BaseSFT is
 
     constructor(
         address owner_,
-        string memory uri_,
-        uint256 minTokenID_,
-        uint256 maxTokenID_
+        string memory uri_
     ) ERC1155(uri_) Ownable(owner_) {
         _pause();
-
-        _minTokenID = minTokenID_;
-        _maxTokenID = maxTokenID_;
 
         _setDefaultRoyalty(owner_, 0);
     }
@@ -125,8 +120,19 @@ contract BaseSFT is
         _isMintersFrozen = true;
     }
 
-    function minTokenID() external view returns (uint256) {
-        return _minTokenID;
+    function addToken(
+        string memory uri_,
+        uint256 holdingThreshold_
+    ) external onlyOwner {
+        _requireTokenIDAdditionNotFrozen();
+
+        _maxTokenID++;
+        if (bytes(uri_).length > 0) {
+            _tokenURIs[_maxTokenID] = uri_;
+        }
+        _holdingThresholds[_maxTokenID] = holdingThreshold_;
+
+        emit TokenAdded(_maxTokenID, uri(_maxTokenID), holdingThreshold_);
     }
 
     function maxTokenID() external view returns (uint256) {
@@ -195,19 +201,10 @@ contract BaseSFT is
         return block.timestamp - _holdingStartedAts[tokenID_][holder_];
     }
 
-    function setHoldingThreshold(
-        uint256 tokenID_,
-        uint256 threshold_
-    ) external onlyOwner {
-        _requireHoldingThresholdsNotFrozen(tokenID_);
-        require(threshold_ > 0, InvalidHoldingThreshold());
-        _holdingThresholds[tokenID_] = threshold_;
-    }
-
     function _mint(address to_, uint256 tokenID_, uint256 amount) internal {
         require(
-            tokenID_ >= _minTokenID && tokenID_ <= _maxTokenID,
-            InvalidTokenIDRange(_minTokenID, _maxTokenID)
+            tokenID_ >= 1 && tokenID_ <= _maxTokenID,
+            InvalidTokenIDRange(1, _maxTokenID)
         );
 
         _mint(to_, tokenID_, amount, "");
@@ -258,10 +255,10 @@ contract BaseSFT is
         require(!_isMintersFrozen, MintersFrozen());
     }
 
-    function freezeTokenIDRange() external onlyOwner {
-        _requireTokenIDRangeNotFrozen();
+    function freezeTokenIDAddition() external onlyOwner {
+        _requireTokenIDAdditionNotFrozen();
 
-        _isTokenIDRangeFrozen = true;
+        _isTokenIDAdditionFrozen = true;
     }
 
     function freezeTokenURI(uint256 tokenID_) external onlyOwner {
@@ -273,25 +270,11 @@ contract BaseSFT is
         emit PermanentURI(_tokenURIs[tokenID_], tokenID_);
     }
 
-    function freezeHoldingThreshold(uint256 tokenID_) external onlyOwner {
-        _requireExists(tokenID_);
-        _requireHoldingThresholdsNotFrozen(tokenID_);
-
-        _isHoldingThresholdFrozen[tokenID_] = true;
-    }
-
-    function _requireTokenIDRangeNotFrozen() internal view {
-        require(!_isTokenIDRangeFrozen, TokenIDRangeFrozen());
+    function _requireTokenIDAdditionNotFrozen() internal view {
+        require(!_isTokenIDAdditionFrozen, TokenIDAdditionFrozen());
     }
 
     function _requireTokenURINotFrozen(uint256 tokenID_) internal view {
         require(!_isTokenURIFrozens[tokenID_], TokenURIFrozen(tokenID_));
-    }
-
-    function _requireHoldingThresholdsNotFrozen(uint256 tokenID) internal view {
-        require(
-            !_isHoldingThresholdFrozen[tokenID],
-            HoldingThresholdFrozen(tokenID)
-        );
     }
 }
