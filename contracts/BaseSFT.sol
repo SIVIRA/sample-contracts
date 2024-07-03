@@ -51,7 +51,6 @@ contract BaseSFT is
 
     mapping(uint256 tokenID => uint256 holdingThreshold)
         internal _holdingThresholds;
-    mapping(uint256 tokenID => bool) internal _isHoldingThresholdFrozen;
     mapping(uint256 tokenID => mapping(address holder => uint256 holdingStartedAt))
         internal _holdingStartedAts;
 
