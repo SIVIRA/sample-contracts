@@ -5,12 +5,20 @@ import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
+import {ERC1155Burnable} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol";
 import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
+contract BaseSFT is
+    IERC165,
+    ERC1155Supply,
+    ERC1155Burnable,
+    ERC2981,
+    Ownable,
+    Pausable
+{
     error InvalidTokenIDRange(uint256 minTokenID, uint256 maxTokenID);
     error TokenIDRangeFrozen();
 
@@ -26,7 +34,7 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
 
     error InsufficientBalance(address holder, uint256 tokenID);
     error InvalidHoldingThreshold();
-    error HoldingThresholdsFrozen(uint256 tokenID);
+    error HoldingThresholdFrozen(uint256 tokenID);
 
     // indicate to OpenSea that an NFT's metadata is frozen
     event PermanentURI(string uri, uint256 indexed tokenID);
@@ -210,7 +218,7 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
         address to,
         uint256[] memory ids,
         uint256[] memory values
-    ) internal override {
+    ) internal override(ERC1155, ERC1155Supply) {
         super._update(from, to, ids, values);
 
         for (uint256 i = 0; i < ids.length; i++) {
@@ -265,6 +273,13 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
         emit PermanentURI(_tokenURIs[tokenID_], tokenID_);
     }
 
+    function freezeHoldingThreshold(uint256 tokenID_) external onlyOwner {
+        _requireExists(tokenID_);
+        _requireHoldingThresholdsNotFrozen(tokenID_);
+
+        _isHoldingThresholdFrozen[tokenID_] = true;
+    }
+
     function _requireTokenIDRangeNotFrozen() internal view {
         require(!_isTokenIDRangeFrozen, TokenIDRangeFrozen());
     }
@@ -276,7 +291,7 @@ contract BaseSFT is IERC165, ERC1155Supply, ERC2981, Ownable, Pausable {
     function _requireHoldingThresholdsNotFrozen(uint256 tokenID) internal view {
         require(
             !_isHoldingThresholdFrozen[tokenID],
-            HoldingThresholdsFrozen(tokenID)
+            HoldingThresholdFrozen(tokenID)
         );
     }
 }
