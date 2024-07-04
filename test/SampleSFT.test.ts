@@ -130,6 +130,19 @@ describe(SFT_CONTRACT_NAME, () => {
     });
   });
 
+  describe("isTokenRegistered", () => {
+    it("registered", async () => {
+      await sft.unpause();
+      await sft.registerToken(1, "", 1);
+      expect(await sft.isTokenRegistered(1)).to.be.true;
+    });
+
+    it("not registered", async () => {
+      await sft.unpause();
+      expect(await sft.isTokenRegistered(1)).to.be.false;
+    });
+  });
+
   describe("tokenURI", () => {
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(
