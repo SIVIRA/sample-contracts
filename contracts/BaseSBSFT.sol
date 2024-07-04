@@ -46,7 +46,7 @@ contract BaseSBSFT is
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
 
-    mapping(uint256 tokenID => bool) internal _tokenRegistered;
+    mapping(uint256 tokenID => bool) internal _isTokenRegistered;
     bool internal _isTokenRegistrationFrozen;
 
     mapping(uint256 tokenID => uint256 holdingThreshold)
@@ -124,19 +124,26 @@ contract BaseSBSFT is
         uint256 holdingThreshold_
     ) external onlyOwner {
         _requireTokenRegistrationNotFrozen();
-        require(!_tokenRegistered[tokenID_], AlreadyRegisteredToken(tokenID_));
+        require(
+            !_isTokenRegistered[tokenID_],
+            AlreadyRegisteredToken(tokenID_)
+        );
         require(
             holdingThreshold_ > 0,
             InvalidHoldingThreshold(holdingThreshold_)
         );
 
-        _tokenRegistered[tokenID_] = true;
+        _isTokenRegistered[tokenID_] = true;
         if (bytes(uri_).length > 0) {
             _tokenURIs[tokenID_] = uri_;
         }
         _holdingThresholds[tokenID_] = holdingThreshold_;
 
         emit TokenRegistered(tokenID_, uri(tokenID_), holdingThreshold_);
+    }
+
+    function isTokenRegistered(uint256 tokenID_) external view returns (bool) {
+        return _isTokenRegistered[tokenID_];
     }
 
     function uri(
@@ -218,7 +225,7 @@ contract BaseSBSFT is
     }
 
     function _requireRegisteredToken(uint256 tokenID_) internal view {
-        require(_tokenRegistered[tokenID_], UnregisteredToken(tokenID_));
+        require(_isTokenRegistered[tokenID_], UnregisteredToken(tokenID_));
     }
 
     function _requireMintersNotFrozen() internal view {

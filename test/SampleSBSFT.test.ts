@@ -145,6 +145,18 @@ describe(SBSFT_CONTRACT_NAME, function () {
     });
   });
 
+  describe("isTokenRegistered", () => {
+    it("registered", async () => {
+      await sft.unpause();
+      await sft.registerToken(1, "https://example.com/tokens/1.json", 1);
+      expect(await sft.isTokenRegistered(1)).to.be.true;
+    });
+
+    it("not registered", async () => {
+      expect(await sft.isTokenRegistered(999)).to.be.false;
+    });
+  });
+
   describe("tokenURI", () => {
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(
