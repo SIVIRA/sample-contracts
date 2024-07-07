@@ -19,22 +19,26 @@ contract BaseSFT is
     Ownable,
     Pausable
 {
-    error InvalidTokenIDRange(uint256 minTokenID, uint256 maxTokenID);
-    error TokenIDRangeFrozen();
+    error UnregisteredToken(uint256 tokenID);
+    error AlreadyRegisteredToken(uint256 tokenID);
+    error TokenRegistrationFrozen();
 
     error TokenURIFrozen(uint256 tokenID);
 
     error RoyaltyFrozen();
-
-    error NonexistentToken(uint256 tokenID);
 
     error InvalidMinter(address minter);
     error MinterAlreadyAdded(address minter);
     error MintersFrozen();
 
     error InsufficientBalance(address holder, uint256 tokenID);
-    error InvalidHoldingThreshold();
-    error HoldingThresholdFrozen(uint256 tokenID);
+    error InvalidHoldingThreshold(uint256 hodlingThreshold);
+
+    event TokenRegistered(
+        uint256 tokenID,
+        string uri,
+        uint256 holdingThreshold
+    );
 
     // indicate to OpenSea that an NFT's metadata is frozen
     event PermanentURI(string uri, uint256 indexed tokenID);
@@ -42,13 +46,11 @@ contract BaseSFT is
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
 
-    uint256 internal _minTokenID;
-    uint256 internal _maxTokenID;
-    bool internal _isTokenIDRangeFrozen;
+    mapping(uint256 tokenID => bool) internal _isTokenRegistereds;
+    bool internal _isTokenRegistrationFrozen;
 
     mapping(uint256 tokenID => uint256 holdingThreshold)
         internal _holdingThresholds;
-    mapping(uint256 tokenID => bool) internal _isHoldingThresholdFrozen;
     mapping(uint256 tokenID => mapping(address holder => uint256 holdingStartedAt))
         internal _holdingStartedAts;
 
@@ -68,14 +70,9 @@ contract BaseSFT is
 
     constructor(
         address owner_,
-        string memory uri_,
-        uint256 minTokenID_,
-        uint256 maxTokenID_
+        string memory uri_
     ) ERC1155(uri_) Ownable(owner_) {
         _pause();
-
-        _minTokenID = minTokenID_;
-        _maxTokenID = maxTokenID_;
 
         _setDefaultRoyalty(owner_, 0);
     }
@@ -125,19 +122,39 @@ contract BaseSFT is
         _isMintersFrozen = true;
     }
 
-    function minTokenID() external view returns (uint256) {
-        return _minTokenID;
+    function registerToken(
+        uint256 tokenID_,
+        string memory uri_,
+        uint256 holdingThreshold_
+    ) external onlyOwner {
+        _requireTokenRegistrationNotFrozen();
+        require(
+            !_isTokenRegistereds[tokenID_],
+            AlreadyRegisteredToken(tokenID_)
+        );
+        require(
+            holdingThreshold_ > 0,
+            InvalidHoldingThreshold(holdingThreshold_)
+        );
+
+        _isTokenRegistereds[tokenID_] = true;
+        if (bytes(uri_).length > 0) {
+            _tokenURIs[tokenID_] = uri_;
+        }
+        _holdingThresholds[tokenID_] = holdingThreshold_;
+
+        emit TokenRegistered(tokenID_, uri(tokenID_), holdingThreshold_);
     }
 
-    function maxTokenID() external view returns (uint256) {
-        return _maxTokenID;
+    function isTokenRegistered(uint256 tokenID_) external view returns (bool) {
+        return _isTokenRegistereds[tokenID_];
     }
 
     function royaltyInfo(
         uint256 tokenID_,
         uint256 salePrice_
     ) public view override returns (address, uint256) {
-        _requireExists(tokenID_);
+        _requireRegisteredToken(tokenID_);
 
         return super.royaltyInfo(tokenID_, salePrice_);
     }
@@ -160,7 +177,7 @@ contract BaseSFT is
     function uri(
         uint256 tokenID_
     ) public view override returns (string memory) {
-        _requireExists(tokenID_);
+        _requireRegisteredToken(tokenID_);
 
         string memory tokenURI = _tokenURIs[tokenID_];
         if (bytes(tokenURI).length > 0) {
@@ -174,7 +191,7 @@ contract BaseSFT is
         uint256 tokenID_,
         string calldata uri_
     ) external onlyOwner {
-        _requireExists(tokenID_);
+        _requireRegisteredToken(tokenID_);
         _requireTokenURINotFrozen(tokenID_);
 
         _tokenURIs[tokenID_] = uri_;
@@ -195,20 +212,8 @@ contract BaseSFT is
         return block.timestamp - _holdingStartedAts[tokenID_][holder_];
     }
 
-    function setHoldingThreshold(
-        uint256 tokenID_,
-        uint256 threshold_
-    ) external onlyOwner {
-        _requireHoldingThresholdsNotFrozen(tokenID_);
-        require(threshold_ > 0, InvalidHoldingThreshold());
-        _holdingThresholds[tokenID_] = threshold_;
-    }
-
     function _mint(address to_, uint256 tokenID_, uint256 amount) internal {
-        require(
-            tokenID_ >= _minTokenID && tokenID_ <= _maxTokenID,
-            InvalidTokenIDRange(_minTokenID, _maxTokenID)
-        );
+        _requireRegisteredToken(tokenID_);
 
         _mint(to_, tokenID_, amount, "");
     }
@@ -223,9 +228,6 @@ contract BaseSFT is
 
         for (uint256 i = 0; i < ids.length; i++) {
             uint256 tokenID = ids[i];
-            if (_holdingThresholds[tokenID] == 0) {
-                continue;
-            }
             if (to != address(0)) {
                 if (
                     balanceOf(to, tokenID) >= _holdingThresholds[tokenID] &&
@@ -246,8 +248,8 @@ contract BaseSFT is
         }
     }
 
-    function _requireExists(uint256 tokenID_) internal view {
-        require(exists(tokenID_), NonexistentToken(tokenID_));
+    function _requireRegisteredToken(uint256 tokenID_) internal view {
+        require(_isTokenRegistereds[tokenID_], UnregisteredToken(tokenID_));
     }
 
     function _requireRoyaltyNotFrozen() internal view {
@@ -258,14 +260,14 @@ contract BaseSFT is
         require(!_isMintersFrozen, MintersFrozen());
     }
 
-    function freezeTokenIDRange() external onlyOwner {
-        _requireTokenIDRangeNotFrozen();
+    function freezeTokenRegistration() external onlyOwner {
+        _requireTokenRegistrationNotFrozen();
 
-        _isTokenIDRangeFrozen = true;
+        _isTokenRegistrationFrozen = true;
     }
 
     function freezeTokenURI(uint256 tokenID_) external onlyOwner {
-        _requireExists(tokenID_);
+        _requireRegisteredToken(tokenID_);
         _requireTokenURINotFrozen(tokenID_);
 
         _isTokenURIFrozens[tokenID_] = true;
@@ -273,25 +275,11 @@ contract BaseSFT is
         emit PermanentURI(_tokenURIs[tokenID_], tokenID_);
     }
 
-    function freezeHoldingThreshold(uint256 tokenID_) external onlyOwner {
-        _requireExists(tokenID_);
-        _requireHoldingThresholdsNotFrozen(tokenID_);
-
-        _isHoldingThresholdFrozen[tokenID_] = true;
-    }
-
-    function _requireTokenIDRangeNotFrozen() internal view {
-        require(!_isTokenIDRangeFrozen, TokenIDRangeFrozen());
+    function _requireTokenRegistrationNotFrozen() internal view {
+        require(!_isTokenRegistrationFrozen, TokenRegistrationFrozen());
     }
 
     function _requireTokenURINotFrozen(uint256 tokenID_) internal view {
         require(!_isTokenURIFrozens[tokenID_], TokenURIFrozen(tokenID_));
-    }
-
-    function _requireHoldingThresholdsNotFrozen(uint256 tokenID) internal view {
-        require(
-            !_isHoldingThresholdFrozen[tokenID],
-            HoldingThresholdFrozen(tokenID)
-        );
     }
 }
