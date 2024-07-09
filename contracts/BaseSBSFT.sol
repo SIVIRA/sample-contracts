@@ -176,8 +176,7 @@ contract BaseSBSFT is
         uint256 tokenID_
     ) external view returns (uint256) {
         require(
-            _holdingThresholds[tokenID_] > 0 &&
-                balanceOf(holder_, tokenID_) >= _holdingThresholds[tokenID_],
+            balanceOf(holder_, tokenID_) >= _holdingThresholds[tokenID_],
             InsufficientBalance(holder_, tokenID_)
         );
 
