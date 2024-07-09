@@ -11,7 +11,7 @@ import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract BaseSFT is
+contract BaseSBSFT is
     IERC165,
     ERC1155Supply,
     ERC1155Burnable,
@@ -25,11 +25,11 @@ contract BaseSFT is
 
     error TokenURIFrozen(uint256 tokenID);
 
-    error RoyaltyFrozen();
-
     error InvalidMinter(address minter);
     error MinterAlreadyAdded(address minter);
     error MintersFrozen();
+
+    error Soulbound();
 
     error InsufficientBalance(address holder, uint256 tokenID);
     error InvalidHoldingThreshold(uint256 hodlingThreshold);
@@ -57,8 +57,6 @@ contract BaseSFT is
     mapping(uint256 tokenID => string uri) internal _tokenURIs;
     mapping(uint256 tokenID => bool isFrozen) internal _isTokenURIFrozens;
 
-    bool internal _isRoyaltyFrozen;
-
     mapping(address minter => bool isMinter) internal _minters;
     bool internal _isMintersFrozen;
 
@@ -73,8 +71,6 @@ contract BaseSFT is
         string memory uri_
     ) ERC1155(uri_) Ownable(owner_) {
         _pause();
-
-        _setDefaultRoyalty(owner_, 0);
     }
 
     function supportsInterface(
@@ -150,30 +146,6 @@ contract BaseSFT is
         return _isTokenRegistereds[tokenID_];
     }
 
-    function royaltyInfo(
-        uint256 tokenID_,
-        uint256 salePrice_
-    ) public view override returns (address, uint256) {
-        _requireRegisteredToken(tokenID_);
-
-        return super.royaltyInfo(tokenID_, salePrice_);
-    }
-
-    function setDefaultRoyalty(
-        address receiver_,
-        uint96 feeNumerator_
-    ) external onlyOwner {
-        _requireRoyaltyNotFrozen();
-
-        _setDefaultRoyalty(receiver_, feeNumerator_);
-    }
-
-    function freezeRoyalty() external onlyOwner {
-        _requireRoyaltyNotFrozen();
-
-        _isRoyaltyFrozen = true;
-    }
-
     function uri(
         uint256 tokenID_
     ) public view override returns (string memory) {
@@ -223,6 +195,10 @@ contract BaseSFT is
         uint256[] memory ids,
         uint256[] memory values
     ) internal override(ERC1155, ERC1155Supply) {
+        bool isMinted = from == address(0);
+        bool isBurned = to == address(0);
+        require(isMinted || isBurned, Soulbound());
+
         super._update(from, to, ids, values);
 
         for (uint256 i = 0; i < ids.length; i++) {
@@ -249,10 +225,6 @@ contract BaseSFT is
 
     function _requireRegisteredToken(uint256 tokenID_) internal view {
         require(_isTokenRegistereds[tokenID_], UnregisteredToken(tokenID_));
-    }
-
-    function _requireRoyaltyNotFrozen() internal view {
-        require(!_isRoyaltyFrozen, RoyaltyFrozen());
     }
 
     function _requireMintersNotFrozen() internal view {
