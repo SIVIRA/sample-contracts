@@ -116,11 +116,8 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
         address to_,
         uint256 value_
     ) internal override {
-        if (from_ == address(0)) {
-            require(
-                totalSupply() + value_ <= cap(),
-                ExceededCap(value_, cap())
-            );
+        if (from_ == address(0) && _cap > 0) {
+            require(totalSupply() + value_ <= _cap, ExceededCap(value_, _cap));
         }
 
         super._update(from_, to_, value_);
