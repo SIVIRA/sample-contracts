@@ -54,6 +54,9 @@ contract BaseSFT is
     mapping(uint256 tokenID => mapping(address holder => uint256 holdingStartedAt))
         internal _holdingStartedAts;
 
+    mapping(uint256 tokenID => uint256 cap) internal _caps;
+    bool internal _capFrozen;
+
     mapping(uint256 tokenID => string uri) internal _tokenURIs;
     mapping(uint256 tokenID => bool isFrozen) internal _isTokenURIFrozens;
 
