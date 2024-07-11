@@ -34,6 +34,9 @@ contract BaseSFT is
     error InsufficientBalance(address holder, uint256 tokenID);
     error InvalidHoldingThreshold(uint256 hodlingThreshold);
 
+    error ExceededCap(uint256 tokenID, uint256 increasedSupply, uint256 cap);
+    error CapFrozen(uint256 tokenID);
+
     event TokenRegistered(
         uint256 tokenID,
         string uri,
@@ -55,7 +58,7 @@ contract BaseSFT is
         internal _holdingStartedAts;
 
     mapping(uint256 tokenID => uint256 cap) internal _caps;
-    bool internal _capFrozen;
+    mapping(uint256 tokenID => bool isFrozen) internal _capFrozen;
 
     mapping(uint256 tokenID => string uri) internal _tokenURIs;
     mapping(uint256 tokenID => bool isFrozen) internal _isTokenURIFrozens;
@@ -149,6 +152,20 @@ contract BaseSFT is
         emit TokenRegistered(tokenID_, uri(tokenID_), holdingThreshold_);
     }
 
+    function setTokenCap(uint256 tokenID_, uint256 cap_) external onlyOwner {
+        _requireRegisteredToken(tokenID_);
+        _requireTokenCapNotFrozen(tokenID_);
+
+        _caps[tokenID_] = cap_;
+    }
+
+    function freezeTokenCap(uint256 tokenID_) external onlyOwner {
+        _requireRegisteredToken(tokenID_);
+        _requireTokenCapNotFrozen(tokenID_);
+
+        _capFrozen[tokenID_] = true;
+    }
+
     function isTokenRegistered(uint256 tokenID_) external view returns (bool) {
         return _isTokenRegistereds[tokenID_];
     }
@@ -216,6 +233,12 @@ contract BaseSFT is
 
     function _mint(address to_, uint256 tokenID_, uint256 amount) internal {
         _requireRegisteredToken(tokenID_);
+        if (_caps[tokenID_] > 0) {
+            require(
+                totalSupply(tokenID_) + amount <= _caps[tokenID_],
+                ExceededCap(tokenID_, amount, _caps[tokenID_])
+            );
+        }
 
         _mint(to_, tokenID_, amount, "");
     }
@@ -283,5 +306,9 @@ contract BaseSFT is
 
     function _requireTokenURINotFrozen(uint256 tokenID_) internal view {
         require(!_isTokenURIFrozens[tokenID_], TokenURIFrozen(tokenID_));
+    }
+
+    function _requireTokenCapNotFrozen(uint256 tokenID_) internal view {
+        require(!_capFrozen[tokenID_], CapFrozen(tokenID_));
     }
 }
