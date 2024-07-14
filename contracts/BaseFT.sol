@@ -94,6 +94,9 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
 
     function setCap(uint256 cap_) external onlyOwner {
         _requireCapNotFrozen();
+        if (cap_ > 0) {
+            require(totalSupply() <= cap_, ExceededCap(totalSupply(), cap_));
+        }
         _cap = cap_;
     }
 
@@ -128,11 +131,6 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
                 _holdingStartedAts[to_] == 0
             ) {
                 _holdingStartedAts[to_] = block.timestamp;
-            } else if (
-                balanceOf(to_) < _holdingThreshold &&
-                _holdingStartedAts[to_] > 0
-            ) {
-                _holdingStartedAts[to_] = 0;
             }
         }
         if (from_ != address(0)) {
