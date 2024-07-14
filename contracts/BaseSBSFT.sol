@@ -34,6 +34,7 @@ contract BaseSBSFT is
     error InsufficientBalance(address holder, uint256 tokenID);
     error InvalidHoldingThreshold(uint256 hodlingThreshold);
 
+    error InvalidCap(uint256 tokenID, uint256 cap);
     error ExceededCap(uint256 tokenID, uint256 increasedSupply, uint256 cap);
     error CapFrozen(uint256 tokenID);
 
@@ -148,16 +149,23 @@ contract BaseSBSFT is
         emit TokenRegistered(tokenID_, uri(tokenID_), holdingThreshold_);
     }
 
-    function setTokenCap(uint256 tokenID_, uint256 cap_) external onlyOwner {
+    function setCap(uint256 tokenID_, uint256 cap_) external onlyOwner {
         _requireRegisteredToken(tokenID_);
-        _requireTokenCapNotFrozen(tokenID_);
+        _requireCapNotFrozen(tokenID_);
+        if (cap_ > 0) {
+            require(totalSupply(tokenID_) <= cap_, InvalidCap(tokenID_, cap_));
+        }
 
         _caps[tokenID_] = cap_;
     }
 
-    function freezeTokenCap(uint256 tokenID_) external onlyOwner {
+    function cap(uint256 tokenID_) external view returns (uint256) {
+        return _caps[tokenID_];
+    }
+
+    function freezeCap(uint256 tokenID_) external onlyOwner {
         _requireRegisteredToken(tokenID_);
-        _requireTokenCapNotFrozen(tokenID_);
+        _requireCapNotFrozen(tokenID_);
 
         _capFrozen[tokenID_] = true;
     }
@@ -280,7 +288,7 @@ contract BaseSBSFT is
         require(!_isTokenURIFrozens[tokenID_], TokenURIFrozen(tokenID_));
     }
 
-    function _requireTokenCapNotFrozen(uint256 tokenID_) internal view {
+    function _requireCapNotFrozen(uint256 tokenID_) internal view {
         require(!_capFrozen[tokenID_], CapFrozen(tokenID_));
     }
 }

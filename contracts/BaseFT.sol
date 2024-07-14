@@ -12,6 +12,7 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
 
+    error InvalidCap(uint256 cap);
     error ExceededCap(uint256 increasedSupply, uint256 cap);
     error CapFrozen();
 
@@ -95,7 +96,7 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
     function setCap(uint256 cap_) external onlyOwner {
         _requireCapNotFrozen();
         if (cap_ > 0) {
-            require(totalSupply() <= cap_, ExceededCap(totalSupply(), cap_));
+            require(totalSupply() <= cap_, InvalidCap(cap_));
         }
         _cap = cap_;
     }

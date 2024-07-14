@@ -193,7 +193,7 @@ describe(FT_CONTRACT_NAME, function () {
         .withArgs(minter.address);
     });
 
-    it("failure: ExceededCap", async () => {
+    it("failure: InvalidCap", async () => {
       await ft.unpause();
       await ft.addMinter(minter.address);
 
@@ -203,8 +203,8 @@ describe(FT_CONTRACT_NAME, function () {
       expect(await ft.totalSupply()).to.be.eq(100);
 
       await expect(ft.setCap(1))
-        .to.be.revertedWithCustomError(ft, "ExceededCap")
-        .withArgs(100, 1);
+        .to.be.revertedWithCustomError(ft, "InvalidCap")
+        .withArgs(1);
     });
   });
 
