@@ -250,7 +250,10 @@ contract BaseSBSFT is
                 }
             }
             if (from != address(0)) {
-                if (balanceOf(from, tokenID) < _holdingThresholds[tokenID]) {
+                if (
+                    balanceOf(from, tokenID) < _holdingThresholds[tokenID] &&
+                    _holdingStartedAts[tokenID][from] > 0
+                ) {
                     _holdingStartedAts[tokenID][from] = 0;
                 }
             }

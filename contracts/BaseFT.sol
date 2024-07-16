@@ -135,7 +135,10 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
             }
         }
         if (from_ != address(0)) {
-            if (balanceOf(from_) < _holdingThreshold) {
+            if (
+                balanceOf(from_) < _holdingThreshold &&
+                _holdingStartedAts[from_] > 0
+            ) {
                 _holdingStartedAts[from_] = 0;
             }
         }
