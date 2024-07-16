@@ -34,6 +34,10 @@ contract BaseSFT is
     error InsufficientBalance(address holder, uint256 tokenID);
     error InvalidHoldingThreshold(uint256 hodlingThreshold);
 
+    error InvalidCap(uint256 tokenID, uint256 cap);
+    error ExceededCap(uint256 tokenID, uint256 increasedSupply, uint256 cap);
+    error CapFrozen(uint256 tokenID);
+
     event TokenRegistered(
         uint256 tokenID,
         string uri,
@@ -53,6 +57,9 @@ contract BaseSFT is
         internal _holdingThresholds;
     mapping(uint256 tokenID => mapping(address holder => uint256 holdingStartedAt))
         internal _holdingStartedAts;
+
+    mapping(uint256 tokenID => uint256 cap) internal _caps;
+    mapping(uint256 tokenID => bool isFrozen) internal _capFrozen;
 
     mapping(uint256 tokenID => string uri) internal _tokenURIs;
     mapping(uint256 tokenID => bool isFrozen) internal _isTokenURIFrozens;
@@ -146,6 +153,27 @@ contract BaseSFT is
         emit TokenRegistered(tokenID_, uri(tokenID_), holdingThreshold_);
     }
 
+    function setCap(uint256 tokenID_, uint256 cap_) external onlyOwner {
+        _requireRegisteredToken(tokenID_);
+        _requireCapNotFrozen(tokenID_);
+        if (cap_ > 0) {
+            require(totalSupply(tokenID_) <= cap_, InvalidCap(tokenID_, cap_));
+        }
+
+        _caps[tokenID_] = cap_;
+    }
+
+    function cap(uint256 tokenID_) external view returns (uint256) {
+        return _caps[tokenID_];
+    }
+
+    function freezeCap(uint256 tokenID_) external onlyOwner {
+        _requireRegisteredToken(tokenID_);
+        _requireCapNotFrozen(tokenID_);
+
+        _capFrozen[tokenID_] = true;
+    }
+
     function isTokenRegistered(uint256 tokenID_) external view returns (bool) {
         return _isTokenRegistereds[tokenID_];
     }
@@ -213,6 +241,12 @@ contract BaseSFT is
 
     function _mint(address to_, uint256 tokenID_, uint256 amount) internal {
         _requireRegisteredToken(tokenID_);
+        if (_caps[tokenID_] > 0) {
+            require(
+                totalSupply(tokenID_) + amount <= _caps[tokenID_],
+                ExceededCap(tokenID_, amount, _caps[tokenID_])
+            );
+        }
 
         _mint(to_, tokenID_, amount, "");
     }
@@ -240,7 +274,10 @@ contract BaseSFT is
                 }
             }
             if (from != address(0)) {
-                if (balanceOf(from, tokenID) < _holdingThresholds[tokenID]) {
+                if (
+                    balanceOf(from, tokenID) < _holdingThresholds[tokenID] &&
+                    _holdingStartedAts[tokenID][from] > 0
+                ) {
                     _holdingStartedAts[tokenID][from] = 0;
                 }
             }
@@ -280,5 +317,9 @@ contract BaseSFT is
 
     function _requireTokenURINotFrozen(uint256 tokenID_) internal view {
         require(!_isTokenURIFrozens[tokenID_], TokenURIFrozen(tokenID_));
+    }
+
+    function _requireCapNotFrozen(uint256 tokenID_) internal view {
+        require(!_capFrozen[tokenID_], CapFrozen(tokenID_));
     }
 }

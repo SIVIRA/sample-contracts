@@ -205,6 +205,54 @@ describe(SBSFT_CONTRACT_NAME, function () {
     });
   });
 
+  describe("token cap", () => {
+    it("all", async () => {
+      await sft.unpause();
+      await sft.registerToken(1, "", 1);
+      await sft.setCap(1, 1);
+      await sft.addMinter(minter.address);
+
+      await sft.connect(minter).airdrop(holder1.address, 1, 1);
+      await expect(
+        sft.connect(minter).airdrop(holder1.address, 1, 1)
+      ).to.be.revertedWithCustomError(sft, "ExceededCap");
+
+      await sft.setCap(1, 10);
+      await sft.connect(minter).airdrop(holder1.address, 1, 9);
+      expect(await sft.balanceOf(holder1.address, 1)).to.be.equal(10);
+
+      await expect(sft.setCap(1, 3))
+        .to.be.revertedWithCustomError(sft, "InvalidCap")
+        .withArgs(1, 3);
+
+      await sft.setCap(1, 0);
+      expect(await sft.cap(1)).to.equal(0);
+    });
+
+    it("freezable", async () => {
+      await sft.unpause();
+      await sft.registerToken(1, "", 1);
+
+      await sft.setCap(1, 10);
+      expect(await sft.cap(1)).to.equal(10);
+
+      await sft.freezeCap(1);
+      await expect(sft.setCap(1, 99))
+        .to.be.revertedWithCustomError(sft, "CapFrozen")
+        .withArgs(1);
+    });
+
+    it("failure: OwnableUnauthorizedAccount", async () => {
+      await expect(sft.connect(minter).setCap(1, 1))
+        .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
+
+      await expect(sft.connect(minter).freezeCap(1))
+        .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
+    });
+  });
+
   describe("airdrop", () => {
     it("success", async () => {
       await sft.unpause();
