@@ -10,7 +10,7 @@ contract SampleFT is IAirdroppableFT, BaseFT {
     function airdrop(
         address to_,
         uint256 amount_
-    ) external override onlyMinter {
+    ) external override onlyMinter whenNotPaused {
         _mint(to_, amount_);
     }
 }
