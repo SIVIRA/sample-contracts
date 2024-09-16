@@ -5,6 +5,7 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { SampleFT, SampleFT__factory } from "../typechain-types";
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import exp from "constants";
 
 const FT_CONTRACT_NAME = "SampleFT" as const;
 
@@ -17,20 +18,13 @@ describe(FT_CONTRACT_NAME, function () {
   let ftFactory: SampleFT__factory;
   let ft: SampleFT;
 
-  const HOLDING_THRESHOLD = 10;
-
   before(async () => {
     [runner, minter, holder1, holder2] = await ethers.getSigners();
   });
 
   beforeEach(async () => {
     ftFactory = await ethers.getContractFactory(FT_CONTRACT_NAME);
-    ft = await ftFactory.deploy(
-      runner.address,
-      "Test",
-      "TS",
-      HOLDING_THRESHOLD
-    );
+    ft = await ftFactory.deploy();
     await ft.waitForDeployment();
   });
 
@@ -151,23 +145,23 @@ describe(FT_CONTRACT_NAME, function () {
     it("success", async () => {
       await ft.unpause();
 
-      expect(await ft.cap()).to.be.eq(0);
-      await ft.setCap(1000);
-      expect(await ft.cap()).to.be.eq(1000);
-      await ft.setCap(0);
-      expect(await ft.cap()).to.be.eq(0);
+      expect(await ft.supplyCap()).to.be.eq(0);
+      await ft.setSupplyCap(1000);
+      expect(await ft.supplyCap()).to.be.eq(1000);
+      await ft.setSupplyCap(0);
+      expect(await ft.supplyCap()).to.be.eq(0);
     });
 
     it("freezable", async () => {
       await ft.unpause();
 
-      expect(await ft.cap()).to.be.eq(0);
-      await ft.setCap(1000);
-      expect(await ft.cap()).to.be.eq(1000);
-      await ft.freezeCap();
-      await expect(ft.setCap(2000)).to.be.revertedWithCustomError(
+      expect(await ft.supplyCap()).to.be.eq(0);
+      await ft.setSupplyCap(1000);
+      expect(await ft.supplyCap()).to.be.eq(1000);
+      await ft.freezeSupplyCap();
+      await expect(ft.setSupplyCap(2000)).to.be.revertedWithCustomError(
         ft,
-        "CapFrozen"
+        "SupplyCapFrozen"
       );
     });
 
@@ -175,20 +169,20 @@ describe(FT_CONTRACT_NAME, function () {
       await ft.unpause();
       await ft.addMinter(minter.address);
 
-      await ft.setCap(100);
-      expect(await ft.cap()).to.be.eq(100);
+      await ft.setSupplyCap(100);
+      expect(await ft.supplyCap()).to.be.eq(100);
 
-      await expect(ft.connect(minter).airdrop(holder1.address, 1000))
-        .to.be.revertedWithCustomError(ft, "ExceededCap")
-        .withArgs(1000, 100);
+      await expect(
+        ft.connect(minter).airdrop(holder1.address, 1000)
+      ).to.be.revertedWithCustomError(ft, "SupplyCapExceeded");
     });
 
     it("failure: OwnableUnauthorizedAccount", async () => {
-      await expect(ft.connect(minter).setCap(100))
+      await expect(ft.connect(minter).setSupplyCap(100))
         .to.be.revertedWithCustomError(ft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
 
-      await expect(ft.connect(minter).freezeCap())
+      await expect(ft.connect(minter).freezeSupplyCap())
         .to.be.revertedWithCustomError(ft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
     });
@@ -197,13 +191,13 @@ describe(FT_CONTRACT_NAME, function () {
       await ft.unpause();
       await ft.addMinter(minter.address);
 
-      await ft.setCap(100);
-      expect(await ft.cap()).to.be.eq(100);
+      await ft.setSupplyCap(100);
+      expect(await ft.supplyCap()).to.be.eq(100);
       await ft.connect(minter).airdrop(holder1.address, 100);
       expect(await ft.totalSupply()).to.be.eq(100);
 
-      await expect(ft.setCap(1))
-        .to.be.revertedWithCustomError(ft, "InvalidCap")
+      await expect(ft.setSupplyCap(1))
+        .to.be.revertedWithCustomError(ft, "InvalidSupplyCap")
         .withArgs(1);
     });
   });
@@ -214,9 +208,7 @@ describe(FT_CONTRACT_NAME, function () {
       await ft.addMinter(minter.address);
 
       expect(await ft.balanceOf(holder1.address)).to.be.eq(0);
-      await expect(ft.holdingPeriod(holder1))
-        .to.be.revertedWithCustomError(ft, "InsufficientBalance")
-        .withArgs(holder1.address);
+      expect(await ft.holdingPeriod(holder1)).to.be.eq(0);
 
       await ft.connect(minter).airdrop(holder1.address, 100);
       expect(await ft.balanceOf(holder1.address)).to.be.eq(100);
@@ -228,27 +220,23 @@ describe(FT_CONTRACT_NAME, function () {
       await ft.unpause();
       await ft.addMinter(minter.address);
 
-      await ft.connect(minter).airdrop(holder1.address, 10);
-      expect(await ft.balanceOf(holder1.address)).to.be.eq(10);
+      await ft.connect(minter).airdrop(holder1.address, 1);
+      expect(await ft.balanceOf(holder1.address)).to.be.eq(1);
       await helpers.time.increase(1000);
       expect(await ft.holdingPeriod(holder1)).to.be.eq(1000);
 
       await ft.connect(holder1).burn(1);
-      expect(await ft.balanceOf(holder1.address)).to.be.eq(9);
-      await expect(ft.holdingPeriod(holder1))
-        .to.be.revertedWithCustomError(ft, "InsufficientBalance")
-        .withArgs(holder1.address);
-
-      await ft.connect(minter).airdrop(holder2.address, 9);
-      expect(await ft.balanceOf(holder2.address)).to.be.eq(9);
-      await expect(ft.holdingPeriod(holder2))
-        .to.be.revertedWithCustomError(ft, "InsufficientBalance")
-        .withArgs(holder2.address);
-
-      await ft.connect(minter).airdrop(holder1.address, 10);
-      await ft.connect(holder1).transfer(holder2.address, 1);
-      expect(await ft.balanceOf(holder2.address)).to.be.eq(10);
+      expect(await ft.balanceOf(holder1.address)).to.be.eq(0);
+      expect(await ft.holdingPeriod(holder1)).to.be.eq(0);
       await helpers.time.increase(1000);
+      expect(await ft.holdingPeriod(holder1)).to.be.eq(0);
+
+      await ft.connect(minter).airdrop(holder1.address, 1);
+      await ft.connect(holder1).transfer(holder2.address, 1);
+      expect(await ft.balanceOf(holder1.address)).to.be.eq(0);
+      expect(await ft.balanceOf(holder2.address)).to.be.eq(1);
+      await helpers.time.increase(1000);
+      expect(await ft.holdingPeriod(holder1)).to.be.eq(0);
       expect(await ft.holdingPeriod(holder2)).to.be.eq(1000);
     });
   });
