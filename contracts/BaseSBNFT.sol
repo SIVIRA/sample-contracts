@@ -134,10 +134,8 @@ contract BaseSBNFT is IERC4906, ERC721Enumerable, Ownable, Pausable {
     ) public view override returns (string memory) {
         _requireOwned(tokenID_);
 
-        string memory uri = _tokenURIs[tokenID_];
-
-        if (bytes(uri).length > 0) {
-            return uri;
+        if (bytes(_tokenURIs[tokenID_]).length > 0) {
+            return _tokenURIs[tokenID_];
         }
 
         return
