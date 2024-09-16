@@ -233,20 +233,6 @@ contract BaseNFT is
         _isRoyaltyFrozen = true;
     }
 
-    function setUser(
-        uint256 tokenID_,
-        address user_,
-        uint64 expires_
-    ) external {
-        _checkAuthorized(ownerOf(tokenID_), _msgSender(), tokenID_);
-
-        UserInfo storage userInfo = _users[tokenID_];
-        userInfo.user = user_;
-        userInfo.expires = expires_;
-
-        emit UpdateUser(tokenID_, user_, expires_);
-    }
-
     function userOf(uint256 tokenID_) external view returns (address) {
         _requireOwned(tokenID_);
 
@@ -263,6 +249,24 @@ contract BaseNFT is
         return _users[tokenID_].expires;
     }
 
+    function setUser(
+        uint256 tokenID_,
+        address user_,
+        uint64 expires_
+    ) external {
+        _checkAuthorized(ownerOf(tokenID_), _msgSender(), tokenID_);
+
+        UserInfo storage userInfo = _users[tokenID_];
+        userInfo.user = user_;
+        userInfo.expires = expires_;
+
+        emit UpdateUser(tokenID_, user_, expires_);
+    }
+
+    function isMinter(address minter_) external view returns (bool) {
+        return _minters[minter_];
+    }
+
     function addMinter(address minter_) external onlyOwner {
         _requireMintersNotFrozen();
 
@@ -272,10 +276,6 @@ contract BaseNFT is
         _minters[minter_] = true;
 
         emit MinterAdded(minter_);
-    }
-
-    function isMinter(address minter_) external view returns (bool) {
-        return _minters[minter_];
     }
 
     function removeMinter(address minter_) external onlyOwner {

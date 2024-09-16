@@ -180,6 +180,10 @@ contract BaseSBNFT is IERC4906, ERC721Enumerable, Ownable, Pausable {
         return block.timestamp - _holdingStartedAts[tokenID_];
     }
 
+    function isMinter(address minter_) external view returns (bool) {
+        return _minters[minter_];
+    }
+
     function addMinter(address minter_) external onlyOwner {
         _requireMintersNotFrozen();
 
@@ -189,10 +193,6 @@ contract BaseSBNFT is IERC4906, ERC721Enumerable, Ownable, Pausable {
         _minters[minter_] = true;
 
         emit MinterAdded(minter_);
-    }
-
-    function isMinter(address minter_) external view returns (bool) {
-        return _minters[minter_];
     }
 
     function removeMinter(address minter_) external onlyOwner {
