@@ -10,8 +10,10 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
     error InvalidSupplyCap(uint256 supplyCap);
-    error SupplyCapFrozen();
     error SupplyCapExceeded();
+    error SupplyCapFrozen();
+
+    error InvalidHoldingAmountThreshold(uint256 holdingAmountThreshold);
 
     error InvalidMinter(address minter);
     error MinterAlreadyAdded(address minter);
@@ -43,6 +45,11 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
         string memory symbol_,
         uint256 holdlingAmountThreshold_
     ) ERC20(name_, symbol_) ERC20Permit(name_) Ownable(owner_) {
+        require(
+            holdlingAmountThreshold_ > 0,
+            InvalidHoldingAmountThreshold(holdlingAmountThreshold_)
+        );
+
         _pause();
 
         _holdingAmountThreshold = holdlingAmountThreshold_;
