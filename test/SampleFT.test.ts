@@ -5,7 +5,6 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { SampleFT, SampleFT__factory } from "../typechain-types";
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
-import exp from "constants";
 
 const FT_CONTRACT_NAME = "SampleFT" as const;
 
@@ -187,7 +186,7 @@ describe(FT_CONTRACT_NAME, function () {
         .withArgs(minter.address);
     });
 
-    it("failure: InvalidCap", async () => {
+    it("failure: InvalidSupplyCap", async () => {
       await ft.unpause();
       await ft.addMinter(minter.address);
 
