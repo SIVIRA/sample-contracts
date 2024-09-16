@@ -95,6 +95,10 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
         return block.timestamp - _holdingStartedAts[holder_];
     }
 
+    function isMinter(address minter_) external view returns (bool) {
+        return _minters[minter_];
+    }
+
     function addMinter(address minter_) external onlyOwner {
         _requireMintersNotFrozen();
 
@@ -104,10 +108,6 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
         _minters[minter_] = true;
 
         emit MinterAdded(minter_);
-    }
-
-    function isMinter(address minter_) external view returns (bool) {
-        return _minters[minter_];
     }
 
     function removeMinter(address minter_) external onlyOwner {
