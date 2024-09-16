@@ -155,10 +155,8 @@ contract BaseNFT is
     ) public view override returns (string memory) {
         _requireOwned(tokenID_);
 
-        string memory uri = _tokenURIs[tokenID_];
-
-        if (bytes(uri).length > 0) {
-            return uri;
+        if (bytes(_tokenURIs[tokenID_]).length > 0) {
+            return _tokenURIs[tokenID_];
         }
 
         return
