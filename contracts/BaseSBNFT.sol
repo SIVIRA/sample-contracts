@@ -237,21 +237,26 @@ contract BaseSBNFT is IERC4906, ERC721Enumerable, Ownable, Pausable {
         uint256 tokenID_,
         address auth_
     ) internal override returns (address) {
+        address from_ = _ownerOf(tokenID_);
         uint256 tokenType_ = _tokenTypes[tokenID_];
 
-        address prevOwner = super._update(to_, tokenID_, auth_);
+        bool isMinting = from_ == address(0);
+        bool isBurning = to_ == address(0);
 
-        bool isMinted = prevOwner == address(0);
-        bool isBurned = to_ == address(0);
+        require(isMinting || isBurning, Soulbound());
 
-        if (isMinted) {
+        super._update(to_, tokenID_, auth_);
+
+        if (isMinting) {
             _typeSupplies[tokenType_]++;
             _typeBalances[to_][tokenType_]++;
 
             _holdingStartedAts[tokenID_] = block.timestamp;
-        } else if (isBurned) {
+        }
+
+        if (isBurning) {
             _typeSupplies[tokenType_]--;
-            _typeBalances[prevOwner][tokenType_]--;
+            _typeBalances[from_][tokenType_]--;
 
             if (bytes(_tokenURIs[tokenID_]).length > 0) {
                 delete _tokenURIs[tokenID_];
@@ -259,12 +264,10 @@ contract BaseSBNFT is IERC4906, ERC721Enumerable, Ownable, Pausable {
 
             delete _tokenTypes[tokenID_];
             delete _holdingStartedAts[tokenID_];
-        } else {
-            revert Soulbound();
         }
 
         emit MetadataUpdate(tokenID_);
 
-        return prevOwner;
+        return from_;
     }
 }

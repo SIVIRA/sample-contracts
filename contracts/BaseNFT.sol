@@ -324,25 +324,27 @@ contract BaseNFT is
         uint256 tokenID_,
         address auth_
     ) internal override returns (address) {
+        address from_ = _ownerOf(tokenID_);
         uint256 tokenType_ = _tokenTypes[tokenID_];
 
-        address prevOwner = super._update(to_, tokenID_, auth_);
-        if (prevOwner == to_) {
-            return prevOwner;
+        bool isMinting = from_ == address(0);
+        bool isBurning = to_ == address(0);
+
+        super._update(to_, tokenID_, auth_);
+
+        if (from_ == to_) {
+            return from_;
         }
 
-        bool isMinted = prevOwner == address(0);
-        bool isBurned = to_ == address(0);
-
-        if (isMinted) {
+        if (isMinting) {
             _typeSupplies[tokenType_]++;
 
             _firstOwners[tokenID_] = to_;
         } else {
-            _typeBalances[prevOwner][tokenType_]--;
+            _typeBalances[from_][tokenType_]--;
         }
 
-        if (isBurned) {
+        if (isBurning) {
             _typeSupplies[tokenType_]--;
 
             _resetTokenRoyalty(tokenID_);
@@ -359,7 +361,7 @@ contract BaseNFT is
             _holdingStartedAts[tokenID_] = block.timestamp;
         }
 
-        if (isMinted || isBurned) {
+        if (isMinting || isBurning) {
             emit MetadataUpdate(tokenID_);
         }
 
@@ -369,6 +371,6 @@ contract BaseNFT is
             emit UpdateUser(tokenID_, address(0), 0);
         }
 
-        return prevOwner;
+        return from_;
     }
 }

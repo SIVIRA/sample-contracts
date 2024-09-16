@@ -139,13 +139,16 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
         address to_,
         uint256 amount_
     ) internal override {
-        if (from_ == address(0) && _supplyCap > 0) {
+        bool isMinting = from_ == address(0);
+        bool isBurning = to_ == address(0);
+
+        if (isMinting && _supplyCap > 0) {
             require(totalSupply() + amount_ <= _supplyCap, SupplyCapExceeded());
         }
 
         super._update(from_, to_, amount_);
 
-        if (from_ != address(0)) {
+        if (!isMinting) {
             if (
                 balanceOf(from_) < _holdingAmountThreshold &&
                 _holdingStartedAts[from_] > 0
@@ -154,7 +157,7 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
             }
         }
 
-        if (to_ != address(0)) {
+        if (!isBurning) {
             if (
                 balanceOf(to_) >= _holdingAmountThreshold &&
                 _holdingStartedAts[to_] == 0
