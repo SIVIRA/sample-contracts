@@ -23,7 +23,7 @@ describe(SFT_CONTRACT_NAME, () => {
 
   beforeEach(async () => {
     sftFactory = await ethers.getContractFactory(SFT_CONTRACT_NAME);
-    sft = await sftFactory.deploy(runner.address);
+    sft = await sftFactory.deploy();
     await sft.waitForDeployment();
   });
 
@@ -81,45 +81,45 @@ describe(SFT_CONTRACT_NAME, () => {
     it("all", async () => {
       await sft.unpause();
       await sft.registerToken(1, "", 1);
-      await sft.setCap(1, 1);
+      await sft.setSupplyCap(1, 1);
       await sft.addMinter(minter.address);
 
       await sft.connect(minter).airdrop(holder1.address, 1, 1);
       await expect(
         sft.connect(minter).airdrop(holder1.address, 1, 1)
-      ).to.be.revertedWithCustomError(sft, "ExceededCap");
+      ).to.be.revertedWithCustomError(sft, "SupplyCapExceeded");
 
-      await sft.setCap(1, 10);
+      await sft.setSupplyCap(1, 10);
       await sft.connect(minter).airdrop(holder1.address, 1, 9);
       expect(await sft.balanceOf(holder1.address, 1)).to.be.equal(10);
 
-      await expect(sft.setCap(1, 3))
-        .to.be.revertedWithCustomError(sft, "InvalidCap")
+      await expect(sft.setSupplyCap(1, 3))
+        .to.be.revertedWithCustomError(sft, "InvalidSupplyCap")
         .withArgs(1, 3);
 
-      await sft.setCap(1, 0);
-      expect(await sft.cap(1)).to.equal(0);
+      await sft.setSupplyCap(1, 0);
+      expect(await sft.supplyCap(1)).to.equal(0);
     });
 
     it("freezable", async () => {
       await sft.unpause();
       await sft.registerToken(1, "", 1);
 
-      await sft.setCap(1, 10);
-      expect(await sft.cap(1)).to.equal(10);
+      await sft.setSupplyCap(1, 10);
+      expect(await sft.supplyCap(1)).to.equal(10);
 
-      await sft.freezeCap(1);
-      await expect(sft.setCap(1, 99))
-        .to.be.revertedWithCustomError(sft, "CapFrozen")
+      await sft.freezeSupplyCap(1);
+      await expect(sft.setSupplyCap(1, 99))
+        .to.be.revertedWithCustomError(sft, "SupplyCapFrozen")
         .withArgs(1);
     });
 
     it("failure: OwnableUnauthorizedAccount", async () => {
-      await expect(sft.connect(minter).setCap(1, 1))
+      await expect(sft.connect(minter).setSupplyCap(1, 1))
         .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
 
-      await expect(sft.connect(minter).freezeCap(1))
+      await expect(sft.connect(minter).freezeSupplyCap(1))
         .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
     });
@@ -132,7 +132,7 @@ describe(SFT_CONTRACT_NAME, () => {
         .withArgs(minter.address);
     });
 
-    it("failure: TokenIDRangeFrozen", async () => {
+    it("failure: TokenRegistrationFrozen", async () => {
       await expect(sft.freezeTokenRegistration()).to.be.not.reverted;
       await expect(sft.freezeTokenRegistration()).to.be.revertedWithCustomError(
         sft,
@@ -160,20 +160,20 @@ describe(SFT_CONTRACT_NAME, () => {
         .withArgs(minter.address);
     });
 
-    it("failure: AlreadyRegisteredToken", async () => {
+    it("failure: TokenAlreadyRegistered", async () => {
       await sft.unpause();
 
       await sft.registerToken(1, "https://example.com/tokens/1.json", 1);
       await expect(sft.registerToken(1, "https://example.com/tokens/1.json", 1))
-        .to.be.revertedWithCustomError(sft, "AlreadyRegisteredToken")
+        .to.be.revertedWithCustomError(sft, "TokenAlreadyRegistered")
         .withArgs(1);
     });
 
-    it("failure: InvalidHolderThreshold", async () => {
+    it("failure: InvalidHoldingAmountThreshold", async () => {
       await sft.unpause();
 
       await expect(sft.registerToken(1, "https://example.com/tokens/1.json", 0))
-        .to.be.revertedWithCustomError(sft, "InvalidHoldingThreshold")
+        .to.be.revertedWithCustomError(sft, "InvalidHoldingAmountThreshold")
         .withArgs(0);
     });
   });
@@ -191,22 +191,22 @@ describe(SFT_CONTRACT_NAME, () => {
     });
   });
 
-  describe("tokenURI", () => {
+  describe("uri", () => {
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(
-        sft.connect(minter).setTokenURI(0, "https://example.com/tokens/0.json")
+        sft.connect(minter).setURI(0, "https://example.com/tokens/0.json")
       )
         .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
 
-      await expect(sft.connect(minter).freezeTokenURI(0))
+      await expect(sft.connect(minter).freezeURI(0))
         .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
     });
 
-    it("failure: UnregisteredToken", async () => {
-      await expect(sft.setTokenURI(999, "https://example.com/tokens/999.json"))
-        .to.be.revertedWithCustomError(sft, "UnregisteredToken")
+    it("failure: TokenUnregistered", async () => {
+      await expect(sft.setURI(999, "https://example.com/tokens/999.json"))
+        .to.be.revertedWithCustomError(sft, "TokenUnregistered")
         .withArgs(999);
     });
 
@@ -216,24 +216,24 @@ describe(SFT_CONTRACT_NAME, () => {
       await sft.addMinter(minter.address);
       await sft.connect(minter).airdrop(holder1.address, 1, 1);
       expect(await sft.uri(1)).to.equal("");
-      await sft.setTokenURI(1, "https://example.com/tokens/1.json");
+      await sft.setURI(1, "https://example.com/tokens/1.json");
       expect(await sft.uri(1)).to.equal("https://example.com/tokens/1.json");
 
       const updatedUri = "https://updated.com/tokens/1.json";
-      await expect(sft.setTokenURI(1, updatedUri))
+      await expect(sft.setURI(1, updatedUri))
         .to.emit(sft, "URI")
         .withArgs(updatedUri, 1);
       expect(await sft.uri(1)).to.equal(updatedUri);
 
-      await expect(sft.freezeTokenURI(1))
+      await expect(sft.freezeURI(1))
         .to.emit(sft, "PermanentURI")
         .withArgs(updatedUri, 1);
       expect(await sft.uri(1)).to.equal(updatedUri);
 
-      await expect(sft.setTokenURI(1, "https://example.com/tokens/1.json"))
+      await expect(sft.setURI(1, "https://example.com/tokens/1.json"))
         .to.be.revertedWithCustomError(sft, "TokenURIFrozen")
         .withArgs(1);
-      await expect(sft.freezeTokenURI(1))
+      await expect(sft.freezeURI(1))
         .to.be.revertedWithCustomError(sft, "TokenURIFrozen")
         .withArgs(1);
     });
@@ -261,7 +261,7 @@ describe(SFT_CONTRACT_NAME, () => {
       await sft.unpause();
       await sft.addMinter(minter.address);
       await expect(sft.connect(minter).airdrop(holder1.address, 999, 1))
-        .to.be.revertedWithCustomError(sft, "UnregisteredToken")
+        .to.be.revertedWithCustomError(sft, "TokenUnregistered")
         .withArgs(999);
     });
 
@@ -312,7 +312,7 @@ describe(SFT_CONTRACT_NAME, () => {
       await sft.setDefaultRoyalty(minter.address, feeNumerator);
 
       await expect(sft.royaltyInfo(0, salePrice))
-        .to.be.revertedWithCustomError(sft, "UnregisteredToken")
+        .to.be.revertedWithCustomError(sft, "TokenUnregistered")
         .withArgs(0);
 
       // unpause: success
@@ -425,15 +425,11 @@ describe(SFT_CONTRACT_NAME, () => {
       await sft.registerToken(1, "", 2);
 
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(0);
-      await expect(sft.holdingPeriod(holder1, 1))
-        .to.be.revertedWithCustomError(sft, "InsufficientBalance")
-        .withArgs(holder1.address, 1);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
 
       await sft.connect(minter).airdrop(holder1.address, 1, 1);
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
-      await expect(sft.holdingPeriod(holder1, 1))
-        .to.be.revertedWithCustomError(sft, "InsufficientBalance")
-        .withArgs(holder1.address, 1);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
 
       await sft.connect(minter).airdrop(holder1.address, 1, 1);
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(2);
@@ -461,9 +457,7 @@ describe(SFT_CONTRACT_NAME, () => {
       expect(await sft.balanceOf(holder2.address, 1)).to.equal(1);
       await helpers.time.increase(1000);
       expect(await sft.holdingPeriod(holder1, 1)).to.equal(2001);
-      await expect(sft.holdingPeriod(holder2, 1))
-        .to.be.revertedWithCustomError(sft, "InsufficientBalance")
-        .withArgs(holder2.address, 1);
+      expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
 
       await sft
         .connect(holder1)
@@ -471,9 +465,7 @@ describe(SFT_CONTRACT_NAME, () => {
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
       expect(await sft.balanceOf(holder2.address, 1)).to.equal(2);
       await helpers.time.increase(1000);
-      await expect(sft.holdingPeriod(holder1, 1))
-        .to.be.revertedWithCustomError(sft, "InsufficientBalance")
-        .withArgs(holder1.address, 1);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
       expect(await sft.holdingPeriod(holder2, 1)).to.equal(1000);
 
       await sft.connect(minter).airdrop(holder2.address, 1, 1);
@@ -483,11 +475,10 @@ describe(SFT_CONTRACT_NAME, () => {
       await sft.connect(holder2).burn(holder2.address, 1, 1);
       expect(await sft.balanceOf(holder2.address, 1)).to.equal(2);
       expect(await sft.holdingPeriod(holder2, 1)).to.equal(1002);
+
       await sft.connect(holder2).burn(holder2.address, 1, 1);
       expect(await sft.balanceOf(holder2.address, 1)).to.equal(1);
-      await expect(sft.holdingPeriod(holder2, 1))
-        .to.be.revertedWithCustomError(sft, "InsufficientBalance")
-        .withArgs(holder2.address, 1);
+      expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
     });
   });
 });

@@ -5,13 +5,13 @@ import {IAirdroppableSFT} from "./IAirdroppableSFT.sol";
 import {BaseSFT} from "./BaseSFT.sol";
 
 contract SampleSFT is BaseSFT, IAirdroppableSFT {
-    constructor(address owner_) BaseSFT(owner_, "") {}
+    constructor() BaseSFT(_msgSender(), "") {}
 
     function airdrop(
-        address to,
-        uint256 tokenID,
-        uint256 amount
+        address to_,
+        uint256 tokenID_,
+        uint256 amount_
     ) external onlyMinter whenNotPaused {
-        _mint(to, tokenID, amount);
+        _mint(to_, tokenID_, amount_);
     }
 }

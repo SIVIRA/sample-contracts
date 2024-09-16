@@ -19,11 +19,17 @@ contract BaseSFT is
     Ownable,
     Pausable
 {
-    error UnregisteredToken(uint256 tokenID);
-    error AlreadyRegisteredToken(uint256 tokenID);
+    error TokenUnregistered(uint256 tokenID);
+    error TokenAlreadyRegistered(uint256 tokenID);
     error TokenRegistrationFrozen();
 
+    error InvalidSupplyCap(uint256 tokenID, uint256 supplyCap);
+    error SupplyCapExceeded(uint256 tokenID);
+    error SupplyCapFrozen(uint256 tokenID);
+
     error TokenURIFrozen(uint256 tokenID);
+
+    error InvalidHoldingAmountThreshold(uint256 hodlingAmountThreshold);
 
     error RoyaltyFrozen();
 
@@ -31,17 +37,10 @@ contract BaseSFT is
     error MinterAlreadyAdded(address minter);
     error MintersFrozen();
 
-    error InsufficientBalance(address holder, uint256 tokenID);
-    error InvalidHoldingThreshold(uint256 hodlingThreshold);
-
-    error InvalidCap(uint256 tokenID, uint256 cap);
-    error ExceededCap(uint256 tokenID, uint256 increasedSupply, uint256 cap);
-    error CapFrozen(uint256 tokenID);
-
     event TokenRegistered(
         uint256 tokenID,
         string uri,
-        uint256 holdingThreshold
+        uint256 holdingAmountThreshold
     );
 
     // indicate to OpenSea that an NFT's metadata is frozen
@@ -53,16 +52,17 @@ contract BaseSFT is
     mapping(uint256 tokenID => bool) internal _isTokenRegistereds;
     bool internal _isTokenRegistrationFrozen;
 
-    mapping(uint256 tokenID => uint256 holdingThreshold)
-        internal _holdingThresholds;
-    mapping(uint256 tokenID => mapping(address holder => uint256 holdingStartedAt))
-        internal _holdingStartedAts;
-
-    mapping(uint256 tokenID => uint256 cap) internal _caps;
-    mapping(uint256 tokenID => bool isFrozen) internal _capFrozen;
+    mapping(uint256 tokenID => uint256 supplyCap) internal _supplyCaps;
+    mapping(uint256 tokenID => bool isSupplyCapFrozen)
+        internal _isSupplyCapFrozens;
 
     mapping(uint256 tokenID => string uri) internal _tokenURIs;
     mapping(uint256 tokenID => bool isFrozen) internal _isTokenURIFrozens;
+
+    mapping(uint256 tokenID => uint256 holdingAmountThreshold)
+        internal _holdingAmountThresholds;
+    mapping(uint256 tokenID => mapping(address holder => uint256 holdingStartedAt))
+        internal _holdingStartedAts;
 
     bool internal _isRoyaltyFrozen;
 
@@ -85,9 +85,9 @@ contract BaseSFT is
     }
 
     function supportsInterface(
-        bytes4 interfaceId
+        bytes4 interfaceID_
     ) public view virtual override(IERC165, ERC1155, ERC2981) returns (bool) {
-        return super.supportsInterface(interfaceId);
+        return super.supportsInterface(interfaceID_);
     }
 
     function pause() external onlyOwner {
@@ -98,91 +98,128 @@ contract BaseSFT is
         _unpause();
     }
 
-    function addMinter(address minter_) external onlyOwner {
-        _requireMintersNotFrozen();
-
-        require(minter_ != address(0), InvalidMinter(address(0)));
-        require(!_minters[minter_], MinterAlreadyAdded(minter_));
-
-        _minters[minter_] = true;
-
-        emit MinterAdded(minter_);
-    }
-
-    function isMinter(address minter_) external view returns (bool) {
-        return _minters[minter_];
-    }
-
-    function removeMinter(address minter_) external onlyOwner {
-        _requireMintersNotFrozen();
-
-        require(_minters[minter_], InvalidMinter(minter_));
-
-        delete _minters[minter_];
-
-        emit MinterRemoved(minter_);
-    }
-
-    function freezeMinters() external onlyOwner {
-        _requireMintersNotFrozen();
-
-        _isMintersFrozen = true;
+    function isTokenRegistered(uint256 tokenID_) external view returns (bool) {
+        return _isTokenRegistereds[tokenID_];
     }
 
     function registerToken(
         uint256 tokenID_,
         string memory uri_,
-        uint256 holdingThreshold_
+        uint256 holdingAmountThreshold_
     ) external onlyOwner {
         _requireTokenRegistrationNotFrozen();
         require(
             !_isTokenRegistereds[tokenID_],
-            AlreadyRegisteredToken(tokenID_)
+            TokenAlreadyRegistered(tokenID_)
         );
         require(
-            holdingThreshold_ > 0,
-            InvalidHoldingThreshold(holdingThreshold_)
+            holdingAmountThreshold_ > 0,
+            InvalidHoldingAmountThreshold(holdingAmountThreshold_)
         );
 
         _isTokenRegistereds[tokenID_] = true;
+
         if (bytes(uri_).length > 0) {
             _tokenURIs[tokenID_] = uri_;
         }
-        _holdingThresholds[tokenID_] = holdingThreshold_;
 
-        emit TokenRegistered(tokenID_, uri(tokenID_), holdingThreshold_);
+        _holdingAmountThresholds[tokenID_] = holdingAmountThreshold_;
+
+        emit TokenRegistered(tokenID_, uri_, holdingAmountThreshold_);
     }
 
-    function setCap(uint256 tokenID_, uint256 cap_) external onlyOwner {
-        _requireRegisteredToken(tokenID_);
-        _requireCapNotFrozen(tokenID_);
-        if (cap_ > 0) {
-            require(totalSupply(tokenID_) <= cap_, InvalidCap(tokenID_, cap_));
+    function freezeTokenRegistration() external onlyOwner {
+        _requireTokenRegistrationNotFrozen();
+
+        _isTokenRegistrationFrozen = true;
+    }
+
+    function supplyCap(uint256 tokenID_) external view returns (uint256) {
+        _requireTokenRegistered(tokenID_);
+
+        return _supplyCaps[tokenID_];
+    }
+
+    function setSupplyCap(
+        uint256 tokenID_,
+        uint256 supplyCap_
+    ) external onlyOwner {
+        _requireTokenRegistered(tokenID_);
+        _requireSupplyCapNotFrozen(tokenID_);
+
+        if (supplyCap_ > 0) {
+            require(
+                totalSupply(tokenID_) <= supplyCap_,
+                InvalidSupplyCap(tokenID_, supplyCap_)
+            );
         }
 
-        _caps[tokenID_] = cap_;
+        _supplyCaps[tokenID_] = supplyCap_;
     }
 
-    function cap(uint256 tokenID_) external view returns (uint256) {
-        return _caps[tokenID_];
+    function freezeSupplyCap(uint256 tokenID_) external onlyOwner {
+        _requireTokenRegistered(tokenID_);
+        _requireSupplyCapNotFrozen(tokenID_);
+
+        _isSupplyCapFrozens[tokenID_] = true;
     }
 
-    function freezeCap(uint256 tokenID_) external onlyOwner {
-        _requireRegisteredToken(tokenID_);
-        _requireCapNotFrozen(tokenID_);
+    function uri(
+        uint256 tokenID_
+    ) public view override returns (string memory) {
+        _requireTokenRegistered(tokenID_);
 
-        _capFrozen[tokenID_] = true;
+        if (bytes(_tokenURIs[tokenID_]).length > 0) {
+            return _tokenURIs[tokenID_];
+        }
+
+        return super.uri(tokenID_);
     }
 
-    function isTokenRegistered(uint256 tokenID_) external view returns (bool) {
-        return _isTokenRegistereds[tokenID_];
+    function setURI(uint256 tokenID_, string calldata uri_) external onlyOwner {
+        _requireTokenRegistered(tokenID_);
+        _requireTokenURINotFrozen(tokenID_);
+
+        _tokenURIs[tokenID_] = uri_;
+
+        emit URI(uri_, tokenID_);
+    }
+
+    function freezeURI(uint256 tokenID_) external onlyOwner {
+        _requireTokenRegistered(tokenID_);
+        _requireTokenURINotFrozen(tokenID_);
+
+        _isTokenURIFrozens[tokenID_] = true;
+
+        emit PermanentURI(_tokenURIs[tokenID_], tokenID_);
+    }
+
+    function holdingAmountThreshold(
+        uint256 tokenID_
+    ) external view returns (uint256) {
+        _requireTokenRegistered(tokenID_);
+
+        return _holdingAmountThresholds[tokenID_];
+    }
+
+    function holdingPeriod(
+        address holder_,
+        uint256 tokenID_
+    ) external view returns (uint256) {
+        _requireTokenRegistered(tokenID_);
+
+        if (_holdingStartedAts[tokenID_][holder_] == 0) {
+            return 0;
+        }
+
+        return block.timestamp - _holdingStartedAts[tokenID_][holder_];
     }
 
     function royaltyInfo(
         uint256 tokenID_,
         uint256 salePrice_
     ) public view override returns (address, uint256) {
-        _requireRegisteredToken(tokenID_);
+        _requireTokenRegistered(tokenID_);
 
         return super.royaltyInfo(tokenID_, salePrice_);
     }
@@ -202,90 +239,51 @@ contract BaseSFT is
         _isRoyaltyFrozen = true;
     }
 
-    function uri(
-        uint256 tokenID_
-    ) public view override returns (string memory) {
-        _requireRegisteredToken(tokenID_);
-
-        string memory tokenURI = _tokenURIs[tokenID_];
-        if (bytes(tokenURI).length > 0) {
-            return tokenURI;
-        }
-
-        return super.uri(tokenID_);
+    function isMinter(address minter_) external view returns (bool) {
+        return _minters[minter_];
     }
 
-    function setTokenURI(
-        uint256 tokenID_,
-        string calldata uri_
-    ) external onlyOwner {
-        _requireRegisteredToken(tokenID_);
-        _requireTokenURINotFrozen(tokenID_);
+    function addMinter(address minter_) external onlyOwner {
+        _requireMintersNotFrozen();
 
-        _tokenURIs[tokenID_] = uri_;
+        require(minter_ != address(0), InvalidMinter(address(0)));
+        require(!_minters[minter_], MinterAlreadyAdded(minter_));
 
-        emit URI(uri_, tokenID_);
+        _minters[minter_] = true;
+
+        emit MinterAdded(minter_);
     }
 
-    function holdingPeriod(
-        address holder_,
-        uint256 tokenID_
-    ) external view returns (uint256) {
-        require(
-            balanceOf(holder_, tokenID_) >= _holdingThresholds[tokenID_],
-            InsufficientBalance(holder_, tokenID_)
-        );
+    function removeMinter(address minter_) external onlyOwner {
+        _requireMintersNotFrozen();
 
-        return block.timestamp - _holdingStartedAts[tokenID_][holder_];
+        require(_minters[minter_], InvalidMinter(minter_));
+
+        delete _minters[minter_];
+
+        emit MinterRemoved(minter_);
     }
 
-    function _mint(address to_, uint256 tokenID_, uint256 amount) internal {
-        _requireRegisteredToken(tokenID_);
-        if (_caps[tokenID_] > 0) {
-            require(
-                totalSupply(tokenID_) + amount <= _caps[tokenID_],
-                ExceededCap(tokenID_, amount, _caps[tokenID_])
-            );
-        }
+    function freezeMinters() external onlyOwner {
+        _requireMintersNotFrozen();
 
-        _mint(to_, tokenID_, amount, "");
+        _isMintersFrozen = true;
     }
 
-    function _update(
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory values
-    ) internal override(ERC1155, ERC1155Supply) {
-        super._update(from, to, ids, values);
-
-        for (uint256 i = 0; i < ids.length; i++) {
-            uint256 tokenID = ids[i];
-            if (to != address(0)) {
-                if (
-                    balanceOf(to, tokenID) >= _holdingThresholds[tokenID] &&
-                    _holdingStartedAts[tokenID][to] == 0
-                ) {
-                    _holdingStartedAts[tokenID][to] = block.timestamp;
-                } else if (
-                    balanceOf(to, tokenID) < _holdingThresholds[tokenID]
-                ) {
-                    _holdingStartedAts[tokenID][to] = 0;
-                }
-            }
-            if (from != address(0)) {
-                if (
-                    balanceOf(from, tokenID) < _holdingThresholds[tokenID] &&
-                    _holdingStartedAts[tokenID][from] > 0
-                ) {
-                    _holdingStartedAts[tokenID][from] = 0;
-                }
-            }
-        }
+    function _requireTokenRegistered(uint256 tokenID_) internal view {
+        require(_isTokenRegistereds[tokenID_], TokenUnregistered(tokenID_));
     }
 
-    function _requireRegisteredToken(uint256 tokenID_) internal view {
-        require(_isTokenRegistereds[tokenID_], UnregisteredToken(tokenID_));
+    function _requireTokenRegistrationNotFrozen() internal view {
+        require(!_isTokenRegistrationFrozen, TokenRegistrationFrozen());
+    }
+
+    function _requireSupplyCapNotFrozen(uint256 tokenID_) internal view {
+        require(!_isSupplyCapFrozens[tokenID_], SupplyCapFrozen(tokenID_));
+    }
+
+    function _requireTokenURINotFrozen(uint256 tokenID_) internal view {
+        require(!_isTokenURIFrozens[tokenID_], TokenURIFrozen(tokenID_));
     }
 
     function _requireRoyaltyNotFrozen() internal view {
@@ -296,30 +294,52 @@ contract BaseSFT is
         require(!_isMintersFrozen, MintersFrozen());
     }
 
-    function freezeTokenRegistration() external onlyOwner {
-        _requireTokenRegistrationNotFrozen();
+    function _mint(address to_, uint256 tokenID_, uint256 amount_) internal {
+        _requireTokenRegistered(tokenID_);
 
-        _isTokenRegistrationFrozen = true;
+        if (_supplyCaps[tokenID_] > 0) {
+            require(
+                totalSupply(tokenID_) + amount_ <= _supplyCaps[tokenID_],
+                SupplyCapExceeded(tokenID_)
+            );
+        }
+
+        _mint(to_, tokenID_, amount_, "");
     }
 
-    function freezeTokenURI(uint256 tokenID_) external onlyOwner {
-        _requireRegisteredToken(tokenID_);
-        _requireTokenURINotFrozen(tokenID_);
+    function _update(
+        address from_,
+        address to_,
+        uint256[] memory tokenIDs_,
+        uint256[] memory amounts_
+    ) internal override(ERC1155, ERC1155Supply) {
+        bool isMinting = from_ == address(0);
+        bool isBurning = to_ == address(0);
 
-        _isTokenURIFrozens[tokenID_] = true;
+        super._update(from_, to_, tokenIDs_, amounts_);
 
-        emit PermanentURI(_tokenURIs[tokenID_], tokenID_);
-    }
+        for (uint256 i = 0; i < tokenIDs_.length; i++) {
+            uint256 tokenID = tokenIDs_[i];
 
-    function _requireTokenRegistrationNotFrozen() internal view {
-        require(!_isTokenRegistrationFrozen, TokenRegistrationFrozen());
-    }
+            if (!isMinting) {
+                if (
+                    balanceOf(from_, tokenID) <
+                    _holdingAmountThresholds[tokenID] &&
+                    _holdingStartedAts[tokenID][from_] > 0
+                ) {
+                    _holdingStartedAts[tokenID][from_] = 0;
+                }
+            }
 
-    function _requireTokenURINotFrozen(uint256 tokenID_) internal view {
-        require(!_isTokenURIFrozens[tokenID_], TokenURIFrozen(tokenID_));
-    }
-
-    function _requireCapNotFrozen(uint256 tokenID_) internal view {
-        require(!_capFrozen[tokenID_], CapFrozen(tokenID_));
+            if (!isBurning) {
+                if (
+                    balanceOf(to_, tokenID) >=
+                    _holdingAmountThresholds[tokenID] &&
+                    _holdingStartedAts[tokenID][to_] == 0
+                ) {
+                    _holdingStartedAts[tokenID][to_] = block.timestamp;
+                }
+            }
+        }
     }
 }
