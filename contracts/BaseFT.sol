@@ -9,24 +9,22 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
-    event MinterAdded(address indexed minter);
-    event MinterRemoved(address indexed minter);
-
-    error InvalidCap(uint256 cap);
-    error ExceededCap(uint256 increasedSupply, uint256 cap);
-    error CapFrozen();
+    error InvalidSupplyCap(uint256 supplyCap);
+    error SupplyCapFrozen();
+    error SupplyCapExceeded();
 
     error InvalidMinter(address minter);
     error MinterAlreadyAdded(address minter);
     error MintersFrozen();
 
-    error InsufficientBalance(address holder);
-    error InvalidHoldingThreshold(uint256 hodlingThreshold);
+    event MinterAdded(address indexed minter);
+    event MinterRemoved(address indexed minter);
 
-    uint256 internal _cap;
-    bool internal _capFrozen;
+    uint256 internal immutable _holdingAmountThreshold;
 
-    uint256 internal immutable _holdingThreshold;
+    uint256 internal _supplyCap;
+    bool internal _isSupplyCapFrozen;
+
     mapping(address holder => uint256 holdingStartedAt)
         internal _holdingStartedAts;
 
@@ -43,11 +41,11 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
         address owner_,
         string memory name_,
         string memory symbol_,
-        uint256 holdlingThreshold_
+        uint256 holdlingAmountThreshold_
     ) ERC20(name_, symbol_) ERC20Permit(name_) Ownable(owner_) {
         _pause();
 
-        _holdingThreshold = holdlingThreshold_;
+        _holdingAmountThreshold = holdlingAmountThreshold_;
     }
 
     function pause() external onlyOwner {
@@ -56,6 +54,34 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
 
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    function supplyCap() public view returns (uint256) {
+        return _supplyCap;
+    }
+
+    function setSupplyCap(uint256 supplyCap_) external onlyOwner {
+        _requireSupplyCapNotFrozen();
+
+        if (supplyCap_ > 0) {
+            require(totalSupply() <= supplyCap_, InvalidSupplyCap(supplyCap_));
+        }
+
+        _supplyCap = supplyCap_;
+    }
+
+    function freezeSupplyCap() external onlyOwner {
+        _requireSupplyCapNotFrozen();
+
+        _isSupplyCapFrozen = true;
+    }
+
+    function holdingPeriod(address holder_) external view returns (uint256) {
+        if (_holdingStartedAts[holder_] == 0) {
+            return 0;
+        }
+
+        return block.timestamp - _holdingStartedAts[holder_];
     }
 
     function addMinter(address minter_) external onlyOwner {
@@ -89,66 +115,41 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
         _isMintersFrozen = true;
     }
 
-    function cap() public view returns (uint256) {
-        return _cap;
+    function _requireSupplyCapNotFrozen() internal view {
+        require(!_isSupplyCapFrozen, SupplyCapFrozen());
     }
 
-    function setCap(uint256 cap_) external onlyOwner {
-        _requireCapNotFrozen();
-        if (cap_ > 0) {
-            require(totalSupply() <= cap_, InvalidCap(cap_));
-        }
-        _cap = cap_;
-    }
-
-    function freezeCap() external onlyOwner {
-        _requireCapNotFrozen();
-        _capFrozen = true;
-    }
-
-    function holdingPeriod(address holder_) external view returns (uint256) {
-        require(
-            balanceOf(holder_) >= _holdingThreshold,
-            InsufficientBalance(holder_)
-        );
-
-        return block.timestamp - _holdingStartedAts[holder_];
+    function _requireMintersNotFrozen() internal view {
+        require(!_isMintersFrozen, MintersFrozen());
     }
 
     function _update(
         address from_,
         address to_,
-        uint256 value_
+        uint256 amount_
     ) internal override {
-        if (from_ == address(0) && _cap > 0) {
-            require(totalSupply() + value_ <= _cap, ExceededCap(value_, _cap));
+        if (from_ == address(0) && _supplyCap > 0) {
+            require(totalSupply() + amount_ <= _supplyCap, SupplyCapExceeded());
         }
 
-        super._update(from_, to_, value_);
+        super._update(from_, to_, amount_);
 
-        if (to_ != address(0)) {
-            if (
-                balanceOf(to_) >= _holdingThreshold &&
-                _holdingStartedAts[to_] == 0
-            ) {
-                _holdingStartedAts[to_] = block.timestamp;
-            }
-        }
         if (from_ != address(0)) {
             if (
-                balanceOf(from_) < _holdingThreshold &&
+                balanceOf(from_) < _holdingAmountThreshold &&
                 _holdingStartedAts[from_] > 0
             ) {
                 _holdingStartedAts[from_] = 0;
             }
         }
-    }
 
-    function _requireCapNotFrozen() internal view {
-        require(!_capFrozen, CapFrozen());
-    }
-
-    function _requireMintersNotFrozen() internal view {
-        require(!_isMintersFrozen, MintersFrozen());
+        if (to_ != address(0)) {
+            if (
+                balanceOf(to_) >= _holdingAmountThreshold &&
+                _holdingStartedAts[to_] == 0
+            ) {
+                _holdingStartedAts[to_] = block.timestamp;
+            }
+        }
     }
 }
