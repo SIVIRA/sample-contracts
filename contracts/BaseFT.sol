@@ -83,6 +83,10 @@ contract BaseFT is ERC20, ERC20Burnable, ERC20Permit, Ownable, Pausable {
         _isSupplyCapFrozen = true;
     }
 
+    function holdingAmountThreshold() external view returns (uint256) {
+        return _holdingAmountThreshold;
+    }
+
     function holdingPeriod(address holder_) external view returns (uint256) {
         if (_holdingStartedAts[holder_] == 0) {
             return 0;
