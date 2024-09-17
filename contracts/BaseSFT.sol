@@ -49,7 +49,8 @@ contract BaseSFT is
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
 
-    mapping(uint256 tokenID => bool) internal _isTokenRegistereds;
+    mapping(uint256 tokenID => bool isTokenRegistered)
+        internal _isTokenRegistereds;
     bool internal _isTokenRegistrationFrozen;
 
     mapping(uint256 tokenID => uint256 supplyCap) internal _supplyCaps;
