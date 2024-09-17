@@ -39,12 +39,12 @@ contract BaseSFT is
 
     event TokenRegistered(
         uint256 tokenID,
-        string uri,
+        string tokenURI,
         uint256 holdingAmountThreshold
     );
 
     // indicate to OpenSea that an NFT's metadata is frozen
-    event PermanentURI(string uri, uint256 indexed tokenID);
+    event PermanentURI(string tokenURI, uint256 indexed tokenID);
 
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
@@ -56,8 +56,9 @@ contract BaseSFT is
     mapping(uint256 tokenID => bool isSupplyCapFrozen)
         internal _isSupplyCapFrozens;
 
-    mapping(uint256 tokenID => string uri) internal _tokenURIs;
-    mapping(uint256 tokenID => bool isFrozen) internal _isTokenURIFrozens;
+    mapping(uint256 tokenID => string tokenURI) internal _tokenURIs;
+    mapping(uint256 tokenID => bool isTokenURIFrozen)
+        internal _isTokenURIFrozens;
 
     mapping(uint256 tokenID => uint256 holdingAmountThreshold)
         internal _holdingAmountThresholds;
@@ -77,8 +78,8 @@ contract BaseSFT is
 
     constructor(
         address owner_,
-        string memory uri_
-    ) ERC1155(uri_) Ownable(owner_) {
+        string memory tokenURI_
+    ) ERC1155(tokenURI_) Ownable(owner_) {
         _pause();
 
         _setDefaultRoyalty(owner_, 0);
@@ -104,7 +105,7 @@ contract BaseSFT is
 
     function registerToken(
         uint256 tokenID_,
-        string memory uri_,
+        string memory tokenURI_,
         uint256 holdingAmountThreshold_
     ) external onlyOwner {
         _requireTokenRegistrationNotFrozen();
@@ -119,13 +120,13 @@ contract BaseSFT is
 
         _isTokenRegistereds[tokenID_] = true;
 
-        if (bytes(uri_).length > 0) {
-            _tokenURIs[tokenID_] = uri_;
+        if (bytes(tokenURI_).length > 0) {
+            _tokenURIs[tokenID_] = tokenURI_;
         }
 
         _holdingAmountThresholds[tokenID_] = holdingAmountThreshold_;
 
-        emit TokenRegistered(tokenID_, uri_, holdingAmountThreshold_);
+        emit TokenRegistered(tokenID_, tokenURI_, holdingAmountThreshold_);
     }
 
     function freezeTokenRegistration() external onlyOwner {
@@ -176,13 +177,16 @@ contract BaseSFT is
         return super.uri(tokenID_);
     }
 
-    function setURI(uint256 tokenID_, string calldata uri_) external onlyOwner {
+    function setURI(
+        uint256 tokenID_,
+        string calldata tokenURI_
+    ) external onlyOwner {
         _requireTokenRegistered(tokenID_);
         _requireTokenURINotFrozen(tokenID_);
 
-        _tokenURIs[tokenID_] = uri_;
+        _tokenURIs[tokenID_] = tokenURI_;
 
-        emit URI(uri_, tokenID_);
+        emit URI(tokenURI_, tokenID_);
     }
 
     function freezeURI(uint256 tokenID_) external onlyOwner {
