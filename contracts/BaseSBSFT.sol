@@ -6,7 +6,6 @@ import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import {ERC1155Burnable} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol";
-import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -15,7 +14,6 @@ contract BaseSBSFT is
     IERC165,
     ERC1155Supply,
     ERC1155Burnable,
-    ERC2981,
     Ownable,
     Pausable
 {
@@ -84,7 +82,7 @@ contract BaseSBSFT is
 
     function supportsInterface(
         bytes4 interfaceID_
-    ) public view virtual override(IERC165, ERC1155, ERC2981) returns (bool) {
+    ) public view virtual override(IERC165, ERC1155) returns (bool) {
         return super.supportsInterface(interfaceID_);
     }
 

@@ -54,7 +54,6 @@ describe(SBSFT_CONTRACT_NAME, function () {
       expect(await sft.supportsInterface("0x00000000")).to.be.false;
       expect(await sft.supportsInterface("0x01ffc9a7")).to.be.true; // ERC165
       expect(await sft.supportsInterface("0xd9b67a26")).to.be.true; // ERC1155
-      expect(await sft.supportsInterface("0x2a55205a")).to.be.true; // ERC2981
     });
   });
 
