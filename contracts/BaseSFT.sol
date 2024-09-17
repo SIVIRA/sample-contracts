@@ -323,25 +323,25 @@ contract BaseSFT is
         super._update(from_, to_, tokenIDs_, amounts_);
 
         for (uint256 i = 0; i < tokenIDs_.length; i++) {
-            uint256 tokenID = tokenIDs_[i];
+            uint256 tokenID_ = tokenIDs_[i];
 
             if (!isMinting) {
                 if (
-                    balanceOf(from_, tokenID) <
-                    _holdingAmountThresholds[tokenID] &&
-                    _holdingStartedAts[tokenID][from_] > 0
+                    balanceOf(from_, tokenID_) <
+                    _holdingAmountThresholds[tokenID_] &&
+                    _holdingStartedAts[tokenID_][from_] > 0
                 ) {
-                    _holdingStartedAts[tokenID][from_] = 0;
+                    _holdingStartedAts[tokenID_][from_] = 0;
                 }
             }
 
             if (!isBurning) {
                 if (
-                    balanceOf(to_, tokenID) >=
-                    _holdingAmountThresholds[tokenID] &&
-                    _holdingStartedAts[tokenID][to_] == 0
+                    balanceOf(to_, tokenID_) >=
+                    _holdingAmountThresholds[tokenID_] &&
+                    _holdingStartedAts[tokenID_][to_] == 0
                 ) {
-                    _holdingStartedAts[tokenID][to_] = block.timestamp;
+                    _holdingStartedAts[tokenID_][to_] = block.timestamp;
                 }
             }
         }
