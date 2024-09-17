@@ -38,7 +38,7 @@ contract BaseNFT is
     error MintersFrozen();
 
     // indicate to OpenSea that an NFT's metadata is frozen
-    event PermanentURI(string uri, uint256 indexed tokenID);
+    event PermanentURI(string tokenURI, uint256 indexed tokenID);
 
     event MinterAdded(address indexed minter);
     event MinterRemoved(address indexed minter);
@@ -60,8 +60,9 @@ contract BaseNFT is
         internal _typeBalances;
 
     string internal _baseTokenURI;
-    mapping(uint256 tokenID => string uri) internal _tokenURIs;
-    mapping(uint256 tokenID => bool isFrozen) internal _isTokenURIFrozens;
+    mapping(uint256 tokenID => string tokenURI) internal _tokenURIs;
+    mapping(uint256 tokenID => bool isTokenURIFrozen)
+        internal _isTokenURIFrozens;
 
     mapping(uint256 tokenID => uint256 holdingStartedAt)
         internal _holdingStartedAts;
@@ -174,12 +175,12 @@ contract BaseNFT is
 
     function setTokenURI(
         uint256 tokenID_,
-        string calldata uri_
+        string calldata tokenURI_
     ) external onlyOwner {
         _requireOwned(tokenID_);
         _requireTokenURINotFrozen(tokenID_);
 
-        _tokenURIs[tokenID_] = uri_;
+        _tokenURIs[tokenID_] = tokenURI_;
 
         emit MetadataUpdate(tokenID_);
     }
