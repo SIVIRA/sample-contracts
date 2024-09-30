@@ -409,7 +409,9 @@ describe(NFT_CONTRACT_NAME, () => {
   });
 
   describe("safeTransferFrom", () => {
-    it("success", async () => {
+    const TOKEN_URI = "https://nft-metadata.world/0x0" as const;
+
+    it("success: from holder1 to holder2", async () => {
       // unpause: success
       await nft.unpause();
 
@@ -421,6 +423,9 @@ describe(NFT_CONTRACT_NAME, () => {
 
       const holdingStartedAt = await utils.now();
       const userExpiredAt = holdingStartedAt + DUMMY_PERIOD * 2;
+
+      // setTokenURI: success
+      await nft.setTokenURI(0, TOKEN_URI);
 
       // setUser: success
       await nft.connect(holder1).setUser(0, holder2.address, userExpiredAt);
@@ -438,7 +443,7 @@ describe(NFT_CONTRACT_NAME, () => {
           .withArgs(holder2.address, 0);
         expect(await nft.totalSupply()).to.equal(1);
         expect(await nft.tokenByIndex(0)).to.equal(0);
-        expect(await nft.tokenURI(0)).to.equal("");
+        expect(await nft.tokenURI(0)).to.equal(TOKEN_URI);
         expect(await nft.tokenType(0)).to.equal(0);
         expect(await nft.typeSupply(0)).to.equal(1);
         expect(await nft.typeBalanceOf(holder1.address, 0)).to.equal(1);
@@ -481,7 +486,7 @@ describe(NFT_CONTRACT_NAME, () => {
       expect(await nft.tokenOfOwnerByIndex(holder2.address, 0)).to.equal(0);
       expect(await nft.totalSupply()).to.equal(1);
       expect(await nft.tokenByIndex(0)).to.equal(0);
-      expect(await nft.tokenURI(0)).to.equal("");
+      expect(await nft.tokenURI(0)).to.equal(TOKEN_URI);
       expect(await nft.tokenType(0)).to.equal(0);
       expect(await nft.typeSupply(0)).to.equal(1);
       expect(await nft.typeBalanceOf(holder1.address, 0)).to.equal(0);
@@ -499,9 +504,97 @@ describe(NFT_CONTRACT_NAME, () => {
       expect(await nft.userOf(0)).to.equal(ethers.ZeroAddress);
       expect(await nft.userExpires(0)).to.equal(0);
     });
+
+    it("success: from holder1 to holder1", async () => {
+      // unpause: success
+      await nft.unpause();
+
+      // addMinter: success
+      await nft.addMinter(minter.address);
+
+      // airdropWithTokenURI: success
+      await nft.connect(minter).airdropWithTokenURI(holder1.address, "");
+
+      const holdingStartedAt = await utils.now();
+      const userExpiredAt = holdingStartedAt + DUMMY_PERIOD * 2;
+
+      // setTokenURI: success
+      await nft.setTokenURI(0, TOKEN_URI);
+
+      // setUser: success
+      await nft.connect(holder1).setUser(0, holder2.address, userExpiredAt);
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await nft.balanceOf(holder1.address)).to.equal(1);
+        expect(await nft.ownerOf(0)).to.equal(holder1.address);
+        expect(await nft.tokenOfOwnerByIndex(holder1.address, 0)).to.equal(0);
+        expect(await nft.totalSupply()).to.equal(1);
+        expect(await nft.tokenByIndex(0)).to.equal(0);
+        expect(await nft.tokenURI(0)).to.equal(TOKEN_URI);
+        expect(await nft.tokenType(0)).to.equal(0);
+        expect(await nft.typeSupply(0)).to.equal(1);
+        expect(await nft.typeBalanceOf(holder1.address, 0)).to.equal(1);
+        expect(await nft.firstOwnerOf(0)).to.equal(holder1.address);
+        expect(await nft.holdingPeriod(0)).to.equal(now - holdingStartedAt);
+        {
+          const [receiver, amount] = await nft.royaltyInfo(
+            0,
+            ethers.parseEther("1")
+          );
+          expect(receiver).to.equal(runner.address);
+          expect(amount).to.equal(0);
+        }
+        expect(await nft.userOf(0)).to.equal(holder2.address);
+        expect(await nft.userExpires(0)).to.equal(userExpiredAt);
+      }
+
+      // safeTransferFrom: success
+      await expect(
+        nft
+          .connect(holder1)
+          ["safeTransferFrom(address,address,uint256)"](
+            holder1.address,
+            holder1.address,
+            0
+          )
+      )
+        .to.emit(nft, "Transfer")
+        .withArgs(holder1.address, holder1.address, 0);
+
+      {
+        const now = await utils.now();
+
+        expect(await nft.balanceOf(holder1.address)).to.equal(1);
+        expect(await nft.ownerOf(0)).to.equal(holder1.address);
+        expect(await nft.tokenOfOwnerByIndex(holder1.address, 0)).to.equal(0);
+        expect(await nft.totalSupply()).to.equal(1);
+        expect(await nft.tokenByIndex(0)).to.equal(0);
+        expect(await nft.tokenURI(0)).to.equal(TOKEN_URI);
+        expect(await nft.tokenType(0)).to.equal(0);
+        expect(await nft.typeSupply(0)).to.equal(1);
+        expect(await nft.typeBalanceOf(holder1.address, 0)).to.equal(1);
+        expect(await nft.firstOwnerOf(0)).to.equal(holder1.address);
+        expect(await nft.holdingPeriod(0)).to.equal(now - holdingStartedAt);
+        {
+          const [receiver, amount] = await nft.royaltyInfo(
+            0,
+            ethers.parseEther("1")
+          );
+          expect(receiver).to.equal(runner.address);
+          expect(amount).to.equal(0);
+        }
+        expect(await nft.userOf(0)).to.equal(holder2.address);
+        expect(await nft.userExpires(0)).to.equal(userExpiredAt);
+      }
+    });
   });
 
   describe("burn", () => {
+    const TOKEN_URI = "https://nft-metadata.world/0x0" as const;
+
     it("failure: ERC721NonexistentToken", async () => {
       await expect(nft.burn(0))
         .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
@@ -537,6 +630,9 @@ describe(NFT_CONTRACT_NAME, () => {
       const holdingStartedAt = await utils.now();
       const userExpiredAt = holdingStartedAt + DUMMY_PERIOD * 2;
 
+      // setTokenURI: success
+      await nft.setTokenURI(0, TOKEN_URI);
+
       // setUser: success
       await nft.connect(holder1).setUser(0, holder2.address, userExpiredAt);
 
@@ -549,7 +645,7 @@ describe(NFT_CONTRACT_NAME, () => {
         expect(await nft.tokenOfOwnerByIndex(holder1.address, 0)).to.equal(0);
         expect(await nft.totalSupply()).to.equal(1);
         expect(await nft.tokenByIndex(0)).to.equal(0);
-        expect(await nft.tokenURI(0)).to.equal("");
+        expect(await nft.tokenURI(0)).to.equal(TOKEN_URI);
         expect(await nft.tokenType(0)).to.equal(0);
         expect(await nft.typeSupply(0)).to.equal(1);
         expect(await nft.typeBalanceOf(holder1.address, 0)).to.equal(1);
