@@ -80,23 +80,22 @@ describe(SFT_CONTRACT_NAME, () => {
   describe("registerToken, freezeTokenRegistration", () => {
     const TOKEN_URI = "https://sft-metadata.com/0x0";
 
-    it("failure: OwnableUnauthorizedAccount", async () => {
+    it("all", async () => {
+      // registerToken: failure: OwnableUnauthorizedAccount
       await expect(sft.connect(minter).registerToken(0, TOKEN_URI, 1))
         .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
 
+      // freezeTokenRegistration: failure: OwnableUnauthorizedAccount
       await expect(sft.connect(minter).freezeTokenRegistration())
         .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
-    });
 
-    it("failure: InvalidHoldingAmountThreshold", async () => {
+      // registerToken: failure: InvalidHoldingAmountThreshold
       await expect(sft.registerToken(0, TOKEN_URI, 0))
         .to.be.revertedWithCustomError(sft, "InvalidHoldingAmountThreshold")
         .withArgs(0);
-    });
 
-    it("success -> failure: TokenAlreadyRegistered -> failure: TokenRegistrationFrozen", async () => {
       expect(await sft.isTokenRegistered(0)).to.be.false;
       await expect(sft.uri(0))
         .to.be.revertedWithCustomError(sft, "TokenUnregistered")
