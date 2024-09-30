@@ -5,10 +5,13 @@ import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { SampleSFT, SampleSFT__factory } from "../typechain-types";
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import * as utils from "./utils";
 
 const SFT_CONTRACT_NAME = "SampleSFT" as const;
 
 describe(SFT_CONTRACT_NAME, () => {
+  const DUMMY_PERIOD = 60 as const;
+
   let runner: HardhatEthersSigner;
   let minter: HardhatEthersSigner;
   let holder1: HardhatEthersSigner;
@@ -78,11 +81,11 @@ describe(SFT_CONTRACT_NAME, () => {
   });
 
   describe("registerToken, freezeTokenRegistration", () => {
-    const TOKEN_URI = "https://sft-metadata.com/0x0";
+    const TOKEN_URI = "https://sft-metadata.com/0x1";
 
     it("all", async () => {
       // registerToken: failure: OwnableUnauthorizedAccount
-      await expect(sft.connect(minter).registerToken(0, TOKEN_URI, 1))
+      await expect(sft.connect(minter).registerToken(1, TOKEN_URI, 1))
         .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
 
@@ -92,38 +95,49 @@ describe(SFT_CONTRACT_NAME, () => {
         .withArgs(minter.address);
 
       // registerToken: failure: InvalidHoldingAmountThreshold
-      await expect(sft.registerToken(0, TOKEN_URI, 0))
+      await expect(sft.registerToken(1, TOKEN_URI, 0))
         .to.be.revertedWithCustomError(sft, "InvalidHoldingAmountThreshold")
         .withArgs(0);
 
-      expect(await sft.isTokenRegistered(0)).to.be.false;
-      await expect(sft.uri(0))
+      expect(await sft.isTokenRegistered(1)).to.be.false;
+      await expect(sft.uri(1))
         .to.be.revertedWithCustomError(sft, "TokenUnregistered")
-        .withArgs(0);
-      await expect(sft.holdingAmountThreshold(0))
+        .withArgs(1);
+      await expect(sft.holdingAmountThreshold(1))
         .to.be.revertedWithCustomError(sft, "TokenUnregistered")
-        .withArgs(0);
+        .withArgs(1);
+      await expect(sft.royaltyInfo(1, ethers.parseEther("1")))
+        .to.be.revertedWithCustomError(sft, "TokenUnregistered")
+        .withArgs(1);
 
       // registerToken: success
-      await expect(sft.registerToken(0, TOKEN_URI, 1))
+      await expect(sft.registerToken(1, TOKEN_URI, 1))
         .to.emit(sft, "TokenRegistered")
-        .withArgs(0, TOKEN_URI, 1);
+        .withArgs(1, TOKEN_URI, 1);
 
-      expect(await sft.isTokenRegistered(0)).to.be.true;
-      expect(await sft.uri(0)).to.equal(TOKEN_URI);
-      expect(await sft.holdingAmountThreshold(0)).to.equal(1);
+      expect(await sft.isTokenRegistered(1)).to.be.true;
+      expect(await sft.uri(1)).to.equal(TOKEN_URI);
+      expect(await sft.holdingAmountThreshold(1)).to.equal(1);
+      {
+        const [receiver, amount] = await sft.royaltyInfo(
+          1,
+          ethers.parseEther("1")
+        );
+        expect(receiver).to.equal(runner.address);
+        expect(amount).to.equal(0);
+      }
 
       // registerToken: failure: TokenAlreadyRegistered
-      await expect(sft.registerToken(0, TOKEN_URI, 1))
+      await expect(sft.registerToken(1, TOKEN_URI, 1))
         .to.be.revertedWithCustomError(sft, "TokenAlreadyRegistered")
-        .withArgs(0);
+        .withArgs(1);
 
       // freezeTokenRegistration: success
       await sft.freezeTokenRegistration();
 
       // registerToken: failure: TokenRegistrationFrozen
       await expect(
-        sft.registerToken(0, TOKEN_URI, 1)
+        sft.registerToken(1, TOKEN_URI, 1)
       ).to.be.revertedWithCustomError(sft, "TokenRegistrationFrozen");
 
       // freezeTokenRegistration: failure: TokenRegistrationFrozen
@@ -163,65 +177,65 @@ describe(SFT_CONTRACT_NAME, () => {
       await sft.addMinter(minter.address);
 
       // registerToken: success
-      await sft.registerToken(0, "", 1);
+      await sft.registerToken(1, "", 1);
 
-      expect(await sft.supplyCap(0)).to.equal(0);
+      expect(await sft.supplyCap(1)).to.equal(0);
 
       // setSupplyCap: success
-      await sft.setSupplyCap(0, 4);
+      await sft.setSupplyCap(1, 4);
 
-      expect(await sft.supplyCap(0)).to.equal(4);
+      expect(await sft.supplyCap(1)).to.equal(4);
 
       // airdrop: success
-      await sft.connect(minter).airdrop(holder1.address, 0, 2);
+      await sft.connect(minter).airdrop(holder1.address, 1, 2);
 
       // setSupplyCap: failure: InvalidSupplyCap
-      await expect(sft.setSupplyCap(0, 1)).to.be.revertedWithCustomError(
+      await expect(sft.setSupplyCap(1, 1)).to.be.revertedWithCustomError(
         sft,
         "InvalidSupplyCap"
       );
 
       // setSupplyCap: success
-      await sft.setSupplyCap(0, 3);
+      await sft.setSupplyCap(1, 3);
 
-      expect(await sft.supplyCap(0)).to.equal(3);
+      expect(await sft.supplyCap(1)).to.equal(3);
 
       // freezeSupplyCap: success
-      await sft.freezeSupplyCap(0);
+      await sft.freezeSupplyCap(1);
 
       // setSupplyCap: failure: SupplyCapFrozen
-      await expect(sft.setSupplyCap(0, 4))
+      await expect(sft.setSupplyCap(1, 4))
         .to.be.revertedWithCustomError(sft, "SupplyCapFrozen")
-        .withArgs(0);
+        .withArgs(1);
 
       // freezeSupplyCap: failure: SupplyCapFrozen
-      await expect(sft.freezeSupplyCap(0))
+      await expect(sft.freezeSupplyCap(1))
         .to.be.revertedWithCustomError(sft, "SupplyCapFrozen")
-        .withArgs(0);
+        .withArgs(1);
     });
   });
 
   describe("setURI, freezeURI", () => {
-    const TOKEN_URI = "https://sft-metadata.com/0x0";
+    const TOKEN_URI = "https://sft-metadata.com/0x1";
 
     it("failure: OwnableUnauthorizedAccount", async () => {
-      await expect(sft.connect(minter).setURI(0, TOKEN_URI))
+      await expect(sft.connect(minter).setURI(1, TOKEN_URI))
         .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
 
-      await expect(sft.connect(minter).freezeURI(0))
+      await expect(sft.connect(minter).freezeURI(1))
         .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
     });
 
     it("failure: TokenUnregistered", async () => {
-      await expect(sft.setURI(0, TOKEN_URI))
+      await expect(sft.setURI(1, TOKEN_URI))
         .to.be.revertedWithCustomError(sft, "TokenUnregistered")
-        .withArgs(0);
+        .withArgs(1);
 
-      await expect(sft.freezeURI(0))
+      await expect(sft.freezeURI(1))
         .to.be.revertedWithCustomError(sft, "TokenUnregistered")
-        .withArgs(0);
+        .withArgs(1);
     });
 
     it("success -> failure: TokenURIFrozen", async () => {
@@ -232,70 +246,136 @@ describe(SFT_CONTRACT_NAME, () => {
       await sft.addMinter(minter.address);
 
       // registerToken: success
-      await sft.registerToken(0, "", 1);
+      await sft.registerToken(1, "", 1);
+
+      expect(await sft.uri(1)).to.equal("");
 
       // airdrop: success
-      await sft.connect(minter).airdrop(holder1.address, 0, 1);
-
-      expect(await sft.uri(0)).to.equal("");
+      await sft.connect(minter).airdrop(holder1.address, 1, 1);
 
       // setURI: success
-      await expect(sft.setURI(0, TOKEN_URI))
+      await expect(sft.setURI(1, TOKEN_URI))
         .to.emit(sft, "URI")
-        .withArgs(TOKEN_URI, 0);
+        .withArgs(TOKEN_URI, 1);
 
-      expect(await sft.uri(0)).to.equal(TOKEN_URI);
+      expect(await sft.uri(1)).to.equal(TOKEN_URI);
 
       // freezeURI: success
-      await expect(sft.freezeURI(0))
+      await expect(sft.freezeURI(1))
         .to.emit(sft, "PermanentURI")
-        .withArgs(TOKEN_URI, 0);
+        .withArgs(TOKEN_URI, 1);
 
-      expect(await sft.uri(0)).to.equal(TOKEN_URI);
+      expect(await sft.uri(1)).to.equal(TOKEN_URI);
 
       // setURI: failure: TokenURIFrozen
-      await expect(sft.setURI(0, TOKEN_URI))
+      await expect(sft.setURI(1, TOKEN_URI))
         .to.be.revertedWithCustomError(sft, "TokenURIFrozen")
-        .withArgs(0);
+        .withArgs(1);
 
       // freezeURI: failure: TokenURIFrozen
-      await expect(sft.freezeURI(0))
+      await expect(sft.freezeURI(1))
         .to.be.revertedWithCustomError(sft, "TokenURIFrozen")
-        .withArgs(0);
+        .withArgs(1);
     });
   });
 
   describe("airdrop", () => {
-    it("success", async () => {
-      await sft.unpause();
+    it("failure: InvalidMinter", async () => {
+      await expect(sft.connect(minter).airdrop(holder1.address, 0, 1))
+        .to.be.revertedWithCustomError(sft, "InvalidMinter")
+        .withArgs(minter.address);
+    });
+
+    it("failure: EnforcedPause", async () => {
+      // addMinter: success
       await sft.addMinter(minter.address);
+
+      // airdrop: failure: EnforcedPause
+      await expect(
+        sft.connect(minter).airdrop(holder1.address, 0, 1)
+      ).to.be.revertedWithCustomError(sft, "EnforcedPause");
+    });
+
+    it("failure: TokenUnregistered", async () => {
+      // unpause: success
+      await sft.unpause();
+
+      // addMinter: success
+      await sft.addMinter(minter.address);
+
+      // airdrop: failure: TokenUnregistered
+      await expect(sft.connect(minter).airdrop(holder1.address, 0, 1))
+        .to.be.revertedWithCustomError(sft, "TokenUnregistered")
+        .withArgs(0);
+    });
+
+    it("failure: SupplyCapExceeded", async () => {
+      // unpause: success
+      await sft.unpause();
+
+      // addMinter: success
+      await sft.addMinter(minter.address);
+
+      // registerToken: success
       await sft.registerToken(1, "", 1);
 
+      // setSupplyCap: success
+      await sft.setSupplyCap(1, 1);
+
+      // airdrop: failure: SupplyCapExceeded
+      await expect(sft.connect(minter).airdrop(holder1.address, 1, 2))
+        .to.be.revertedWithCustomError(sft, "SupplyCapExceeded")
+        .withArgs(1);
+    });
+
+    it("success", async () => {
+      // unpause: success
+      await sft.unpause();
+
+      // addMinter: success
+      await sft.addMinter(minter.address);
+
+      // registerToken: success
+      await sft.registerToken(1, "", 3);
+
+      expect(await sft.balanceOf(holder1.address, 1)).to.equal(0);
+      expect(await sft["totalSupply()"]()).to.equal(0);
+      expect(await sft["totalSupply(uint256)"](1)).to.equal(0);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+
+      // airdrop: success
       await sft.connect(minter).airdrop(holder1.address, 1, 1);
+
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
       expect(await sft["totalSupply()"]()).to.equal(1);
       expect(await sft["totalSupply(uint256)"](1)).to.equal(1);
-    });
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
 
-    it("failure: not minter", async () => {
-      await expect(sft.connect(holder1).airdrop(holder1.address, 1, 1))
-        .to.be.revertedWithCustomError(sft, "InvalidMinter")
-        .withArgs(holder1.address);
-    });
+      // time passed
+      {
+        await helpers.time.increase(DUMMY_PERIOD);
 
-    it("failure: token id is not registered", async () => {
-      await sft.unpause();
-      await sft.addMinter(minter.address);
-      await expect(sft.connect(minter).airdrop(holder1.address, 999, 1))
-        .to.be.revertedWithCustomError(sft, "TokenUnregistered")
-        .withArgs(999);
-    });
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+      }
 
-    it("failure: paused", async () => {
-      await sft.addMinter(minter.address);
-      await expect(
-        sft.connect(minter).airdrop(holder1.address, 1, 1)
-      ).to.be.revertedWithCustomError(sft, "EnforcedPause");
+      // airdrop: success
+      await sft.connect(minter).airdrop(holder1.address, 1, 2);
+
+      const holdingStartedAt = await utils.now();
+
+      expect(await sft.balanceOf(holder1.address, 1)).to.equal(3);
+      expect(await sft["totalSupply()"]()).to.equal(3);
+      expect(await sft["totalSupply(uint256)"](1)).to.equal(3);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(
+          now - holdingStartedAt
+        );
+      }
     });
   });
 
@@ -348,13 +428,13 @@ describe(SFT_CONTRACT_NAME, () => {
       await sft.addMinter(minter.address);
 
       // registerToken: success
-      await sft.registerToken(0, "", 1);
+      await sft.registerToken(1, "", 1);
 
       // airdrop: success
-      await sft.connect(minter).airdrop(holder1.address, 0, 1);
+      await sft.connect(minter).airdrop(holder1.address, 1, 1);
 
       {
-        const [receiver, amount] = await sft.royaltyInfo(0, salePrice);
+        const [receiver, amount] = await sft.royaltyInfo(1, salePrice);
         expect(receiver).to.equal(minter.address);
         expect(amount).to.equal((salePrice * feeNumerator) / feeDenominator);
       }
@@ -442,70 +522,6 @@ describe(SFT_CONTRACT_NAME, () => {
         sft,
         "MintersFrozen"
       );
-    });
-  });
-
-  describe("holding", () => {
-    it("airdrop and over threshold", async () => {
-      await sft.unpause();
-      await sft.addMinter(minter.address);
-      await sft.registerToken(1, "", 2);
-
-      expect(await sft.balanceOf(holder1.address, 1)).to.equal(0);
-      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
-
-      await sft.connect(minter).airdrop(holder1.address, 1, 1);
-      expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
-      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
-
-      await sft.connect(minter).airdrop(holder1.address, 1, 1);
-      expect(await sft.balanceOf(holder1.address, 1)).to.equal(2);
-      await helpers.time.increase(1000);
-      expect(await sft.holdingPeriod(holder1, 1)).to.equal(1000);
-    });
-
-    it("transfer tokens", async () => {
-      await sft.unpause();
-      await sft.addMinter(minter.address);
-      await sft.registerToken(1, "", 2);
-
-      expect(await sft.balanceOf(holder1.address, 1)).to.equal(0);
-      expect(await sft.balanceOf(holder2.address, 1)).to.equal(0);
-
-      await sft.connect(minter).airdrop(holder1.address, 1, 3);
-      expect(await sft.balanceOf(holder1.address, 1)).to.equal(3);
-      await helpers.time.increase(1000);
-      expect(await sft.holdingPeriod(holder1, 1)).to.equal(1000);
-
-      await sft
-        .connect(holder1)
-        .safeTransferFrom(holder1.address, holder2.address, 1, 1, "0x");
-      expect(await sft.balanceOf(holder1.address, 1)).to.equal(2);
-      expect(await sft.balanceOf(holder2.address, 1)).to.equal(1);
-      await helpers.time.increase(1000);
-      expect(await sft.holdingPeriod(holder1, 1)).to.equal(2001);
-      expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
-
-      await sft
-        .connect(holder1)
-        .safeTransferFrom(holder1.address, holder2.address, 1, 1, "0x");
-      expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
-      expect(await sft.balanceOf(holder2.address, 1)).to.equal(2);
-      await helpers.time.increase(1000);
-      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
-      expect(await sft.holdingPeriod(holder2, 1)).to.equal(1000);
-
-      await sft.connect(minter).airdrop(holder2.address, 1, 1);
-      expect(await sft.balanceOf(holder2.address, 1)).to.equal(3);
-      expect(await sft.holdingPeriod(holder2, 1)).to.equal(1001);
-
-      await sft.connect(holder2).burn(holder2.address, 1, 1);
-      expect(await sft.balanceOf(holder2.address, 1)).to.equal(2);
-      expect(await sft.holdingPeriod(holder2, 1)).to.equal(1002);
-
-      await sft.connect(holder2).burn(holder2.address, 1, 1);
-      expect(await sft.balanceOf(holder2.address, 1)).to.equal(1);
-      expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
     });
   });
 });
