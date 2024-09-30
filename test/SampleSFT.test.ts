@@ -134,51 +134,70 @@ describe(SFT_CONTRACT_NAME, () => {
     });
   });
 
-  describe("token cap", () => {
+  describe("setSupplyCap, freezeSupplyCap", () => {
     it("all", async () => {
+      // setSupplyCap: failure: OwnableUnauthorizedAccount
+      await expect(sft.connect(minter).setSupplyCap(0, 0))
+        .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
+
+      // freezeSupplyCap: failure: OwnableUnauthorizedAccount
+      await expect(sft.connect(minter).freezeSupplyCap(0))
+        .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
+
+      // setSupplyCap: failure: TokenUnregistered
+      await expect(sft.setSupplyCap(0, 0))
+        .to.be.revertedWithCustomError(sft, "TokenUnregistered")
+        .withArgs(0);
+
+      // freezeSupplyCap: failure: TokenUnregistered
+      await expect(sft.freezeSupplyCap(0))
+        .to.be.revertedWithCustomError(sft, "TokenUnregistered")
+        .withArgs(0);
+
+      // unpause: success
       await sft.unpause();
-      await sft.registerToken(1, "", 1);
-      await sft.setSupplyCap(1, 1);
+
+      // addMinter: success
       await sft.addMinter(minter.address);
 
-      await sft.connect(minter).airdrop(holder1.address, 1, 1);
-      await expect(
-        sft.connect(minter).airdrop(holder1.address, 1, 1)
-      ).to.be.revertedWithCustomError(sft, "SupplyCapExceeded");
+      // registerToken: success
+      await sft.registerToken(0, "", 1);
 
-      await sft.setSupplyCap(1, 10);
-      await sft.connect(minter).airdrop(holder1.address, 1, 9);
-      expect(await sft.balanceOf(holder1.address, 1)).to.be.equal(10);
+      expect(await sft.supplyCap(0)).to.equal(0);
 
-      await expect(sft.setSupplyCap(1, 3))
-        .to.be.revertedWithCustomError(sft, "InvalidSupplyCap")
-        .withArgs(1, 3);
+      // setSupplyCap: success
+      await sft.setSupplyCap(0, 4);
 
-      await sft.setSupplyCap(1, 0);
-      expect(await sft.supplyCap(1)).to.equal(0);
-    });
+      expect(await sft.supplyCap(0)).to.equal(4);
 
-    it("freezable", async () => {
-      await sft.unpause();
-      await sft.registerToken(1, "", 1);
+      // airdrop: success
+      await sft.connect(minter).airdrop(holder1.address, 0, 2);
 
-      await sft.setSupplyCap(1, 10);
-      expect(await sft.supplyCap(1)).to.equal(10);
+      // setSupplyCap: failure: InvalidSupplyCap
+      await expect(sft.setSupplyCap(0, 1)).to.be.revertedWithCustomError(
+        sft,
+        "InvalidSupplyCap"
+      );
 
-      await sft.freezeSupplyCap(1);
-      await expect(sft.setSupplyCap(1, 99))
+      // setSupplyCap: success
+      await sft.setSupplyCap(0, 3);
+
+      expect(await sft.supplyCap(0)).to.equal(3);
+
+      // freezeSupplyCap: success
+      await sft.freezeSupplyCap(0);
+
+      // setSupplyCap: failure: SupplyCapFrozen
+      await expect(sft.setSupplyCap(0, 4))
         .to.be.revertedWithCustomError(sft, "SupplyCapFrozen")
-        .withArgs(1);
-    });
+        .withArgs(0);
 
-    it("failure: OwnableUnauthorizedAccount", async () => {
-      await expect(sft.connect(minter).setSupplyCap(1, 1))
-        .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
-        .withArgs(minter.address);
-
-      await expect(sft.connect(minter).freezeSupplyCap(1))
-        .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
-        .withArgs(minter.address);
+      // freezeSupplyCap: failure: SupplyCapFrozen
+      await expect(sft.freezeSupplyCap(0))
+        .to.be.revertedWithCustomError(sft, "SupplyCapFrozen")
+        .withArgs(0);
     });
   });
 
