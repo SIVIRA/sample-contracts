@@ -2,12 +2,15 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { NoTypeNFT, NoTypeNFT__factory } from "../typechain-types";
+import {
+  SampleSingleTypeNFT,
+  SampleSingleTypeNFT__factory,
+} from "../typechain-types";
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
-const NFT_CONTRACT_NAME = "NoTypeNFT" as const;
+const NFT_CONTRACT_NAME = "SampleSingleTypeNFT" as const;
 
 describe(NFT_CONTRACT_NAME, () => {
   const DUMMY_PERIOD = 60 as const;
@@ -17,8 +20,8 @@ describe(NFT_CONTRACT_NAME, () => {
   let holder1: HardhatEthersSigner;
   let holder2: HardhatEthersSigner;
 
-  let nftFactory: NoTypeNFT__factory;
-  let nft: NoTypeNFT;
+  let nftFactory: SampleSingleTypeNFT__factory;
+  let nft: SampleSingleTypeNFT;
 
   before(async () => {
     [runner, minter, holder1, holder2] = await ethers.getSigners();
@@ -101,12 +104,65 @@ describe(NFT_CONTRACT_NAME, () => {
     });
   });
 
-  describe("setTokenURI, freezeTokenURI", () => {
-    const TOKEN_URI_V1 = "https://nft-metadata.world/v1/0x0" as const;
-    const TOKEN_URI_V2 = "https://nft-metadata.world/v2/0x0" as const;
+  describe("setBaseTokenURI", () => {
+    const BASE_TOKEN_URI = "https://nft-metadata.world/" as const;
 
     it("failure: OwnableUnauthorizedAccount", async () => {
-      await expect(nft.connect(minter).setTokenURI(0, TOKEN_URI_V1))
+      await expect(nft.connect(minter).setBaseTokenURI(BASE_TOKEN_URI))
+        .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
+    });
+
+    it("success: single", async () => {
+      // unpause: success
+      await nft.unpause();
+
+      // addMinter: success
+      await nft.addMinter(minter.address);
+
+      // airdrop: success
+      await nft.connect(minter).airdrop(holder1.address);
+
+      expect(await nft.tokenURI(0)).to.equal("");
+
+      // setBaseTokenURI: success: single
+      await expect(nft.setBaseTokenURI(BASE_TOKEN_URI))
+        .to.emit(nft, "MetadataUpdate")
+        .withArgs(0);
+
+      expect(await nft.tokenURI(0)).to.equal(BASE_TOKEN_URI + "0/0");
+    });
+
+    it("success: plural", async () => {
+      // unpause: success
+      await nft.unpause();
+
+      // addMinter: success
+      await nft.addMinter(minter.address);
+
+      // airdrop: success
+      await nft.connect(minter).airdrop(holder1.address);
+      await nft.connect(minter).airdrop(holder2.address);
+
+      expect(await nft.tokenURI(0)).to.equal("");
+      expect(await nft.tokenURI(1)).to.equal("");
+
+      // setBaseTokenURI: success: plural
+      await expect(nft.setBaseTokenURI(BASE_TOKEN_URI))
+        .to.emit(nft, "BatchMetadataUpdate")
+        .withArgs(0, 1);
+
+      expect(await nft.tokenURI(0)).to.equal(BASE_TOKEN_URI + "0/0");
+      expect(await nft.tokenURI(1)).to.equal(BASE_TOKEN_URI + "0/1");
+    });
+  });
+
+  describe("setTokenURI, freezeTokenURI", () => {
+    const BASE_TOKEN_URI = "https://nft-metadata.world/" as const;
+    const TOKEN_URI = "https://nft-metadata.world/0x0" as const;
+
+    it("failure: OwnableUnauthorizedAccount", async () => {
+      await expect(nft.connect(minter).setTokenURI(0, TOKEN_URI))
         .to.be.revertedWithCustomError(nft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
 
@@ -116,7 +172,7 @@ describe(NFT_CONTRACT_NAME, () => {
     });
 
     it("failure: ERC721NonexistentToken", async () => {
-      await expect(nft.setTokenURI(0, TOKEN_URI_V1))
+      await expect(nft.setTokenURI(0, TOKEN_URI))
         .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
         .withArgs(0);
 
@@ -132,29 +188,30 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // airdropWithTokenURI: success
-      await nft
-        .connect(minter)
-        .airdropWithTokenURI(holder1.address, TOKEN_URI_V1);
+      // airdrop: success
+      await nft.connect(minter).airdrop(holder1.address);
 
-      expect(await nft.tokenURI(0)).to.equal(TOKEN_URI_V1);
+      // setBaseTokenURI: success
+      await nft.setBaseTokenURI(BASE_TOKEN_URI);
+
+      expect(await nft.tokenURI(0)).to.equal(BASE_TOKEN_URI + "0/0");
 
       // setTokenURI: success
-      await expect(nft.setTokenURI(0, TOKEN_URI_V2))
+      await expect(nft.setTokenURI(0, TOKEN_URI))
         .to.emit(nft, "MetadataUpdate")
         .withArgs(0);
 
-      expect(await nft.tokenURI(0)).to.equal(TOKEN_URI_V2);
+      expect(await nft.tokenURI(0)).to.equal(TOKEN_URI);
 
       // freezeTokenURI: success
       await expect(nft.freezeTokenURI(0))
         .to.emit(nft, "PermanentURI")
-        .withArgs(TOKEN_URI_V2, 0);
+        .withArgs(TOKEN_URI, 0);
 
-      expect(await nft.tokenURI(0)).to.equal(TOKEN_URI_V2);
+      expect(await nft.tokenURI(0)).to.equal(TOKEN_URI);
 
       // setTokenURI: failure: TokenURIFrozen
-      await expect(nft.setTokenURI(0, TOKEN_URI_V1))
+      await expect(nft.setTokenURI(0, TOKEN_URI))
         .to.be.revertedWithCustomError(nft, "TokenURIFrozen")
         .withArgs(0);
 
@@ -166,28 +223,8 @@ describe(NFT_CONTRACT_NAME, () => {
   });
 
   describe("airdrop", () => {
-    it("failure: UnsupportedFunction", async () => {
-      await expect(
-        nft.connect(minter).airdrop(holder1.address)
-      ).to.be.revertedWithCustomError(nft, "UnsupportedFunction");
-    });
-  });
-
-  describe("airdropByType", () => {
-    it("failure: UnsupportedFunction", async () => {
-      await expect(
-        nft.connect(minter).airdropByType(holder1.address, 0)
-      ).to.be.revertedWithCustomError(nft, "UnsupportedFunction");
-    });
-  });
-
-  describe("airdropWithTokenURI", () => {
-    const TOKEN_URI = "https://nft-metadata.world/0x0" as const;
-
     it("failure: InvalidMinter", async () => {
-      await expect(
-        nft.connect(minter).airdropWithTokenURI(holder1.address, TOKEN_URI)
-      )
+      await expect(nft.connect(minter).airdrop(holder1.address))
         .to.be.revertedWithCustomError(nft, "InvalidMinter")
         .withArgs(minter.address);
     });
@@ -196,9 +233,9 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // airdropWithTokenURI: failure: EnforcedPause
+      // airdrop: failure: EnforcedPause
       await expect(
-        nft.connect(minter).airdropWithTokenURI(holder1.address, TOKEN_URI)
+        nft.connect(minter).airdrop(holder1.address)
       ).to.be.revertedWithCustomError(nft, "EnforcedPause");
     });
 
@@ -244,10 +281,8 @@ describe(NFT_CONTRACT_NAME, () => {
         .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
         .withArgs(0);
 
-      // airdropWithTokenURI: success
-      await expect(
-        nft.connect(minter).airdropWithTokenURI(holder1.address, TOKEN_URI)
-      )
+      // airdrop: success
+      await expect(nft.connect(minter).airdrop(holder1.address))
         .to.emit(nft, "Transfer")
         .withArgs(ethers.ZeroAddress, holder1.address, 0)
         .to.emit(nft, "MetadataUpdate")
@@ -260,7 +295,7 @@ describe(NFT_CONTRACT_NAME, () => {
       expect(await nft.tokenOfOwnerByIndex(holder1.address, 0)).to.equal(0);
       expect(await nft.totalSupply()).to.equal(1);
       expect(await nft.tokenByIndex(0)).to.equal(0);
-      expect(await nft.tokenURI(0)).to.equal(TOKEN_URI);
+      expect(await nft.tokenURI(0)).to.equal("");
       expect(await nft.tokenType(0)).to.equal(0);
       expect(await nft.typeSupply(0)).to.equal(1);
       expect(await nft.typeBalanceOf(holder1.address, 0)).to.equal(1);
@@ -292,28 +327,35 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // airdropWithTokenURI: success
-      await nft.connect(minter).airdropWithTokenURI(holder1.address, TOKEN_URI);
+      // airdrop: success
+      await nft.connect(minter).airdrop(holder1.address);
 
-      // airdropWithTokenURI: failure: AlreadyAirdropped
-      await expect(
-        nft.connect(minter).airdropWithTokenURI(holder1.address, TOKEN_URI)
-      )
+      // airdrop: failure: AlreadyAirdropped
+      await expect(nft.connect(minter).airdrop(holder1.address))
         .to.be.revertedWithCustomError(nft, "AlreadyAirdropped")
         .withArgs(holder1.address);
     });
   });
 
-  describe("bulkAirdropWithTokenURI", () => {
-    const TOKEN_URI_0 = "https://nft-metadata.world/0x0" as const;
-    const TOKEN_URI_1 = "https://nft-metadata.world/0x1" as const;
-
-    it("failure: InvalidMinter", async () => {
+  describe("airdropByType", () => {
+    it("failure: UnsupportedFunction", async () => {
       await expect(
-        nft
-          .connect(minter)
-          .bulkAirdropWithTokenURI([holder1.address], [TOKEN_URI_0])
-      )
+        nft.connect(minter).airdropByType(holder1.address, 0)
+      ).to.be.revertedWithCustomError(nft, "UnsupportedFunction");
+    });
+  });
+
+  describe("airdropWithTokenURI", () => {
+    it("failure: UnsupportedFunction", async () => {
+      await expect(
+        nft.connect(minter).airdropWithTokenURI(holder1.address, "")
+      ).to.be.revertedWithCustomError(nft, "UnsupportedFunction");
+    });
+  });
+
+  describe("bulkAirdrop", () => {
+    it("failure: InvalidMinter", async () => {
+      await expect(nft.connect(minter).bulkAirdrop([holder1.address]))
         .to.be.revertedWithCustomError(nft, "InvalidMinter")
         .withArgs(minter.address);
     });
@@ -322,25 +364,10 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // bulkAirdropWithTokenURI: failure: EnforcedPause
+      // bulkAirdrop: failure: EnforcedPause
       await expect(
-        nft
-          .connect(minter)
-          .bulkAirdropWithTokenURI([holder1.address], [TOKEN_URI_0])
+        nft.connect(minter).bulkAirdrop([holder1.address])
       ).to.be.revertedWithCustomError(nft, "EnforcedPause");
-    });
-
-    it("failure: ArgumentLengthMismatch", async () => {
-      // unpause: success
-      await nft.unpause();
-
-      // addMinter: success
-      await nft.addMinter(minter.address);
-
-      // bulkAirdropWithTokenURI: failure: ArgumentLengthMismatch
-      await expect(
-        nft.connect(minter).bulkAirdropWithTokenURI([holder1.address], [])
-      ).to.be.revertedWithCustomError(nft, "ArgumentLengthMismatch");
     });
 
     it("success", async () => {
@@ -356,14 +383,9 @@ describe(NFT_CONTRACT_NAME, () => {
       expect(await nft.balanceOf(holder2.address)).to.equal(0);
       expect(await nft.typeBalanceOf(holder2.address, 0)).to.equal(0);
 
-      // bulkAirdropWithTokenURI: success
+      // bulkAirdrop: success
       await expect(
-        nft
-          .connect(minter)
-          .bulkAirdropWithTokenURI(
-            [holder1.address, holder2.address],
-            [TOKEN_URI_0, TOKEN_URI_1]
-          )
+        nft.connect(minter).bulkAirdrop([holder1.address, holder2.address])
       )
         .to.emit(nft, "Transfer")
         .withArgs(ethers.ZeroAddress, holder1.address, 0)
@@ -376,12 +398,10 @@ describe(NFT_CONTRACT_NAME, () => {
 
       expect(await nft.balanceOf(holder1.address)).to.equal(1);
       expect(await nft.ownerOf(0)).to.equal(holder1.address);
-      expect(await nft.tokenURI(0)).to.equal(TOKEN_URI_0);
       expect(await nft.typeBalanceOf(holder1.address, 0)).to.equal(1);
 
       expect(await nft.balanceOf(holder2.address)).to.equal(1);
       expect(await nft.ownerOf(1)).to.equal(holder2.address);
-      expect(await nft.tokenURI(1)).to.equal(TOKEN_URI_1);
       expect(await nft.typeBalanceOf(holder2.address, 0)).to.equal(1);
     });
 
@@ -392,17 +412,11 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // bulkAirdropWithTokenURI: success
-      await nft
-        .connect(minter)
-        .bulkAirdropWithTokenURI([holder1.address], [TOKEN_URI_0]);
+      // bulkAirdrop: success
+      await nft.connect(minter).bulkAirdrop([holder1.address]);
 
-      // bulkAirdropWithTokenURI: failure: AlreadyAirdropped
-      await expect(
-        nft
-          .connect(minter)
-          .bulkAirdropWithTokenURI([holder1.address], [TOKEN_URI_0])
-      )
+      // bulkAirdrop: failure: AlreadyAirdropped
+      await expect(nft.connect(minter).bulkAirdrop([holder1.address]))
         .to.be.revertedWithCustomError(nft, "AlreadyAirdropped")
         .withArgs(holder1.address);
     });
@@ -416,8 +430,8 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // airdropWithTokenURI: success
-      await nft.connect(minter).airdropWithTokenURI(holder1.address, "");
+      // airdrop: success
+      await nft.connect(minter).airdrop(holder1.address);
 
       const holdingStartedAt = await utils.now();
       const userExpiredAt = holdingStartedAt + DUMMY_PERIOD * 2;
@@ -515,8 +529,8 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // airdropWithTokenURI: success
-      await nft.connect(minter).airdropWithTokenURI(holder1.address, "");
+      // airdrop: success
+      await nft.connect(minter).airdrop(holder1.address);
 
       // burn: failure: ERC721InsufficientApproval
       await expect(nft.burn(0))
@@ -531,8 +545,8 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // airdropWithTokenURI: success
-      await nft.connect(minter).airdropWithTokenURI(holder1.address, "");
+      // airdrop: success
+      await nft.connect(minter).airdrop(holder1.address);
 
       const holdingStartedAt = await utils.now();
       const userExpiredAt = holdingStartedAt + DUMMY_PERIOD * 2;
@@ -642,8 +656,8 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // airdropWithTokenURI: success
-      await nft.connect(minter).airdropWithTokenURI(holder1.address, "");
+      // airdrop: success
+      await nft.connect(minter).airdrop(holder1.address);
 
       {
         const [receiver, amount] = await nft.royaltyInfo(0, salePrice);
@@ -683,8 +697,8 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // airdropWithTokenURI: success
-      await nft.connect(minter).airdropWithTokenURI(holder1.address, "");
+      // airdrop: success
+      await nft.connect(minter).airdrop(holder1.address);
 
       // setUser: failure: ERC721InsufficientApproval
       await expect(
@@ -708,8 +722,8 @@ describe(NFT_CONTRACT_NAME, () => {
         .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
         .withArgs(0);
 
-      // airdropWithTokenURI: success
-      await nft.connect(minter).airdropWithTokenURI(holder1.address, "");
+      // airdrop: success
+      await nft.connect(minter).airdrop(holder1.address);
 
       expect(await nft.userOf(0)).to.equal(ethers.ZeroAddress);
       expect(await nft.userExpires(0)).to.equal(0);
@@ -747,8 +761,8 @@ describe(NFT_CONTRACT_NAME, () => {
         .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
         .withArgs(0);
 
-      // airdropWithTokenURI: success
-      await nft.connect(minter).airdropWithTokenURI(holder1.address, "");
+      // airdrop: success
+      await nft.connect(minter).airdrop(holder1.address);
 
       // approve: success
       await nft.connect(holder1).approve(holder2.address, 0);
@@ -860,8 +874,8 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // airdropWithTokenURI: success
-      await nft.connect(minter).airdropWithTokenURI(holder1.address, "");
+      // airdrop: success
+      await nft.connect(minter).airdrop(holder1.address);
 
       // refreshMetadata: success: single
       await expect(nft.refreshMetadata())
@@ -876,9 +890,9 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await nft.addMinter(minter.address);
 
-      // airdropWithTokenURI: success
-      await nft.connect(minter).airdropWithTokenURI(holder1.address, "");
-      await nft.connect(minter).airdropWithTokenURI(holder2.address, "");
+      // airdrop: success
+      await nft.connect(minter).airdrop(holder1.address);
+      await nft.connect(minter).airdrop(holder2.address);
 
       // refreshMetadata: success: plural
       await expect(nft.refreshMetadata())

@@ -2,12 +2,15 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { MultipleTypeNFT, MultipleTypeNFT__factory } from "../typechain-types";
+import {
+  SampleMultipleTypeNFT,
+  SampleMultipleTypeNFT__factory,
+} from "../typechain-types";
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
-const NFT_CONTRACT_NAME = "MultipleTypeNFT" as const;
+const NFT_CONTRACT_NAME = "SampleMultipleTypeNFT" as const;
 const NFT_MAX_TOKEN_TYPE = 3 as const;
 
 describe(NFT_CONTRACT_NAME, () => {
@@ -18,8 +21,8 @@ describe(NFT_CONTRACT_NAME, () => {
   let holder1: HardhatEthersSigner;
   let holder2: HardhatEthersSigner;
 
-  let nftFactory: MultipleTypeNFT__factory;
-  let nft: MultipleTypeNFT;
+  let nftFactory: SampleMultipleTypeNFT__factory;
+  let nft: SampleMultipleTypeNFT;
 
   before(async () => {
     [runner, minter, holder1, holder2] = await ethers.getSigners();

@@ -6,38 +6,25 @@ import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 import {IAirdroppableNFT} from "./IAirdroppableNFT.sol";
 import {BaseNFT} from "./BaseNFT.sol";
 
-error InvalidMaxTokenType(uint256 maxTokenType);
-error AlreadyAirdropped(uint256 tokenType, address to);
+error AlreadyAirdropped(address to);
 
-contract MultipleTypeNFT is IERC4906, IAirdroppableNFT, BaseNFT {
-    uint256 private constant _MIN_TOKEN_TYPE = 1;
+contract SampleSingleTypeNFT is IERC4906, IAirdroppableNFT, BaseNFT {
+    uint256 private constant _TOKEN_TYPE = 0;
 
     uint256 private _tokenIDCounter;
 
-    mapping(uint256 tokenType => mapping(address to => bool isAirdropped))
-        private _isAirdroppeds;
+    mapping(address to => bool isAirdropped) private _isAirdroppeds;
 
-    constructor(
-        uint256 maxTokenType_
-    )
+    constructor()
         BaseNFT(
             _msgSender(),
-            "Multiple Type NFT",
-            "MTNFT",
-            _MIN_TOKEN_TYPE,
-            maxTokenType_
+            "Sample Signle Type NFT",
+            "SSTNFT",
+            _TOKEN_TYPE,
+            _TOKEN_TYPE
         )
-    {}
-
-    function setMaxTokenType(uint256 maxTokenType_) external onlyOwner {
-        _requireTokenTypeRangeNotFrozen();
-
-        require(
-            maxTokenType_ > _maxTokenType,
-            InvalidMaxTokenType(maxTokenType_)
-        );
-
-        _maxTokenType = maxTokenType_;
+    {
+        _isTokenTypeRangeFrozen = true;
     }
 
     function setBaseTokenURI(string calldata uri_) external onlyOwner {
@@ -46,31 +33,27 @@ contract MultipleTypeNFT is IERC4906, IAirdroppableNFT, BaseNFT {
         _refreshMetadata();
     }
 
-    function airdrop(address) external pure {
-        revert IAirdroppableNFT.UnsupportedFunction();
+    function airdrop(address to_) external onlyMinter whenNotPaused {
+        _requireNotAirdropped(to_);
+
+        _airdrop(to_, _TOKEN_TYPE, "");
     }
 
-    function airdropByType(
-        address to_,
-        uint256 tokenType_
-    ) external onlyMinter whenNotPaused {
-        _requireNotAirdropped(tokenType_, to_);
-
-        _airdrop(to_, tokenType_, "");
+    function airdropByType(address, uint256) external pure {
+        revert IAirdroppableNFT.UnsupportedFunction();
     }
 
     function airdropWithTokenURI(address, string calldata) external pure {
         revert IAirdroppableNFT.UnsupportedFunction();
     }
 
-    function bulkAirdropByType(
-        address[] calldata tos_,
-        uint256 tokenType_
+    function bulkAirdrop(
+        address[] calldata tos_
     ) external onlyMinter whenNotPaused {
         for (uint256 i = 0; i < tos_.length; i++) {
-            _requireNotAirdropped(tokenType_, tos_[i]);
+            _requireNotAirdropped(tos_[i]);
 
-            _airdrop(tos_[i], tokenType_, "");
+            _airdrop(tos_[i], _TOKEN_TYPE, "");
         }
     }
 
@@ -84,14 +67,8 @@ contract MultipleTypeNFT is IERC4906, IAirdroppableNFT, BaseNFT {
         _refreshMetadata();
     }
 
-    function _requireNotAirdropped(
-        uint256 tokenType_,
-        address to_
-    ) private view {
-        require(
-            !_isAirdroppeds[tokenType_][to_],
-            AlreadyAirdropped(tokenType_, to_)
-        );
+    function _requireNotAirdropped(address to_) private view {
+        require(!_isAirdroppeds[to_], AlreadyAirdropped(to_));
     }
 
     function _mintedAmount() private view returns (uint256) {
@@ -103,7 +80,7 @@ contract MultipleTypeNFT is IERC4906, IAirdroppableNFT, BaseNFT {
         uint256 tokenType_,
         string memory tokenURI_
     ) private {
-        _isAirdroppeds[tokenType_][to_] = true;
+        _isAirdroppeds[to_] = true;
 
         _mint(to_, _tokenIDCounter, tokenType_);
 
