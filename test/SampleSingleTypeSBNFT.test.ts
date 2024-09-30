@@ -3,15 +3,14 @@ import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import {
-  MultipleTypeSBNFT,
-  MultipleTypeSBNFT__factory,
+  SampleSingleTypeSBNFT,
+  SampleSingleTypeSBNFT__factory,
 } from "../typechain-types";
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
-const SBNFT_CONTRACT_NAME = "MultipleTypeSBNFT" as const;
-const SBNFT_MAX_TOKEN_TYPE = 3 as const;
+const SBNFT_CONTRACT_NAME = "SampleSingleTypeSBNFT" as const;
 
 describe(SBNFT_CONTRACT_NAME, () => {
   const DUMMY_PERIOD = 60 as const;
@@ -21,8 +20,8 @@ describe(SBNFT_CONTRACT_NAME, () => {
   let holder1: HardhatEthersSigner;
   let holder2: HardhatEthersSigner;
 
-  let sbnftFactory: MultipleTypeSBNFT__factory;
-  let sbnft: MultipleTypeSBNFT;
+  let sbnftFactory: SampleSingleTypeSBNFT__factory;
+  let sbnft: SampleSingleTypeSBNFT;
 
   before(async () => {
     [runner, minter, holder1, holder2] = await ethers.getSigners();
@@ -30,7 +29,7 @@ describe(SBNFT_CONTRACT_NAME, () => {
 
   beforeEach(async () => {
     sbnftFactory = await ethers.getContractFactory(SBNFT_CONTRACT_NAME);
-    sbnft = await sbnftFactory.deploy(SBNFT_MAX_TOKEN_TYPE);
+    sbnft = await sbnftFactory.deploy();
     await sbnft.waitForDeployment();
   });
 
@@ -38,8 +37,8 @@ describe(SBNFT_CONTRACT_NAME, () => {
     it("success", async () => {
       expect(await sbnft.owner()).to.equal(runner.address);
       expect(await sbnft.paused()).to.be.true;
-      expect(await sbnft.minTokenType()).to.equal(1);
-      expect(await sbnft.maxTokenType()).to.equal(SBNFT_MAX_TOKEN_TYPE);
+      expect(await sbnft.minTokenType()).to.equal(0);
+      expect(await sbnft.maxTokenType()).to.equal(0);
     });
   });
 
@@ -90,41 +89,14 @@ describe(SBNFT_CONTRACT_NAME, () => {
     });
   });
 
-  describe("setMaxTokenType, freezeTokenTypeRange", async () => {
+  describe("freezeTokenTypeRange", () => {
     it("failure: OwnableUnauthorizedAccount", async () => {
-      await expect(
-        sbnft.connect(minter).setMaxTokenType(SBNFT_MAX_TOKEN_TYPE + 1)
-      )
-        .to.be.revertedWithCustomError(sbnft, "OwnableUnauthorizedAccount")
-        .withArgs(minter.address);
-
       await expect(sbnft.connect(minter).freezeTokenTypeRange())
         .to.be.revertedWithCustomError(sbnft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
     });
 
-    it("failure: InvalidMaxTokenType", async () => {
-      await expect(sbnft.setMaxTokenType(SBNFT_MAX_TOKEN_TYPE - 1))
-        .to.be.revertedWithCustomError(sbnft, "InvalidMaxTokenType")
-        .withArgs(SBNFT_MAX_TOKEN_TYPE - 1);
-    });
-
-    it("success -> failure: TokenTypeRangeFrozen", async () => {
-      // setMaxTokenType: success
-      await sbnft.setMaxTokenType(SBNFT_MAX_TOKEN_TYPE + 1);
-
-      expect(await sbnft.minTokenType()).to.equal(1);
-      expect(await sbnft.maxTokenType()).to.equal(SBNFT_MAX_TOKEN_TYPE + 1);
-
-      // freezeTokenTypeRange: success
-      await sbnft.freezeTokenTypeRange();
-
-      // setMaxTokenType: failure: TokenTypeRangeFrozen
-      await expect(
-        sbnft.setMaxTokenType(SBNFT_MAX_TOKEN_TYPE + 2)
-      ).to.be.revertedWithCustomError(sbnft, "TokenTypeRangeFrozen");
-
-      // freezeTokenTypeRange: failure: TokenTypeRangeFrozen
+    it("failure: TokenTypeRangeFrozen", async () => {
       await expect(sbnft.freezeTokenTypeRange()).to.be.revertedWithCustomError(
         sbnft,
         "TokenTypeRangeFrozen"
@@ -148,8 +120,8 @@ describe(SBNFT_CONTRACT_NAME, () => {
       // addMinter: success
       await sbnft.addMinter(minter.address);
 
-      // airdropByType: success
-      await sbnft.connect(minter).airdropByType(holder1.address, 1);
+      // airdrop: success
+      await sbnft.connect(minter).airdrop(holder1.address);
 
       expect(await sbnft.tokenURI(0)).to.equal("");
 
@@ -158,7 +130,7 @@ describe(SBNFT_CONTRACT_NAME, () => {
         .to.emit(sbnft, "MetadataUpdate")
         .withArgs(0);
 
-      expect(await sbnft.tokenURI(0)).to.equal(BASE_TOKEN_URI + "1/0");
+      expect(await sbnft.tokenURI(0)).to.equal(BASE_TOKEN_URI + "0/0");
     });
 
     it("success: plural", async () => {
@@ -168,9 +140,9 @@ describe(SBNFT_CONTRACT_NAME, () => {
       // addMinter: success
       await sbnft.addMinter(minter.address);
 
-      // airdropByType: success
-      await sbnft.connect(minter).airdropByType(holder1.address, 1);
-      await sbnft.connect(minter).airdropByType(holder2.address, 1);
+      // airdrop: success
+      await sbnft.connect(minter).airdrop(holder1.address);
+      await sbnft.connect(minter).airdrop(holder2.address);
 
       expect(await sbnft.tokenURI(0)).to.equal("");
       expect(await sbnft.tokenURI(1)).to.equal("");
@@ -180,8 +152,8 @@ describe(SBNFT_CONTRACT_NAME, () => {
         .to.emit(sbnft, "BatchMetadataUpdate")
         .withArgs(0, 1);
 
-      expect(await sbnft.tokenURI(0)).to.equal(BASE_TOKEN_URI + "1/0");
-      expect(await sbnft.tokenURI(1)).to.equal(BASE_TOKEN_URI + "1/1");
+      expect(await sbnft.tokenURI(0)).to.equal(BASE_TOKEN_URI + "0/0");
+      expect(await sbnft.tokenURI(1)).to.equal(BASE_TOKEN_URI + "0/1");
     });
   });
 
@@ -216,13 +188,13 @@ describe(SBNFT_CONTRACT_NAME, () => {
       // addMinter: success
       await sbnft.addMinter(minter.address);
 
-      // airdropByType: success
-      await sbnft.connect(minter).airdropByType(holder1.address, 1);
+      // airdrop: success
+      await sbnft.connect(minter).airdrop(holder1.address);
 
       // setBaseTokenURI: success
       await sbnft.setBaseTokenURI(BASE_TOKEN_URI);
 
-      expect(await sbnft.tokenURI(0)).to.equal(BASE_TOKEN_URI + "1/0");
+      expect(await sbnft.tokenURI(0)).to.equal(BASE_TOKEN_URI + "0/0");
 
       // setTokenURI: success
       await expect(sbnft.setTokenURI(0, TOKEN_URI))
@@ -251,16 +223,8 @@ describe(SBNFT_CONTRACT_NAME, () => {
   });
 
   describe("airdrop", () => {
-    it("failure: UnsupportedFunction", async () => {
-      await expect(
-        sbnft.connect(minter).airdrop(holder1.address)
-      ).to.be.revertedWithCustomError(sbnft, "UnsupportedFunction");
-    });
-  });
-
-  describe("airdropByType", () => {
     it("failure: InvalidMinter", async () => {
-      await expect(sbnft.connect(minter).airdropByType(holder1.address, 1))
+      await expect(sbnft.connect(minter).airdrop(holder1.address))
         .to.be.revertedWithCustomError(sbnft, "InvalidMinter")
         .withArgs(minter.address);
     });
@@ -269,30 +233,10 @@ describe(SBNFT_CONTRACT_NAME, () => {
       // addMinter: success
       await sbnft.addMinter(minter.address);
 
-      // airdropByType: failure: EnforcedPause
+      // airdrop: failure: EnforcedPause
       await expect(
-        sbnft.connect(minter).airdropByType(holder1.address, 1)
+        sbnft.connect(minter).airdrop(holder1.address)
       ).to.be.revertedWithCustomError(sbnft, "EnforcedPause");
-    });
-
-    it("failure: InvalidTokenType", async () => {
-      // unpause: success
-      await sbnft.unpause();
-
-      // addMinter: success
-      await sbnft.addMinter(minter.address);
-
-      // airdropByType: failure: InvalidTokenType
-      await expect(sbnft.connect(minter).airdropByType(holder1.address, 0))
-        .to.be.revertedWithCustomError(sbnft, "InvalidTokenType")
-        .withArgs(0);
-      await expect(
-        sbnft
-          .connect(minter)
-          .airdropByType(holder1.address, SBNFT_MAX_TOKEN_TYPE + 1)
-      )
-        .to.be.revertedWithCustomError(sbnft, "InvalidTokenType")
-        .withArgs(SBNFT_MAX_TOKEN_TYPE + 1);
     });
 
     it("success", async () => {
@@ -319,14 +263,14 @@ describe(SBNFT_CONTRACT_NAME, () => {
       await expect(sbnft.tokenType(0))
         .to.be.revertedWithCustomError(sbnft, "ERC721NonexistentToken")
         .withArgs(0);
-      expect(await sbnft.typeSupply(1)).to.equal(0);
-      expect(await sbnft.typeBalanceOf(holder1.address, 1)).to.equal(0);
+      expect(await sbnft.typeSupply(0)).to.equal(0);
+      expect(await sbnft.typeBalanceOf(holder1.address, 0)).to.equal(0);
       await expect(sbnft.holdingPeriod(0))
         .to.be.revertedWithCustomError(sbnft, "ERC721NonexistentToken")
         .withArgs(0);
 
-      // airdropByType: success
-      await expect(sbnft.connect(minter).airdropByType(holder1.address, 1))
+      // airdrop: success
+      await expect(sbnft.connect(minter).airdrop(holder1.address))
         .to.emit(sbnft, "Transfer")
         .withArgs(ethers.ZeroAddress, holder1.address, 0)
         .to.emit(sbnft, "MetadataUpdate")
@@ -340,9 +284,9 @@ describe(SBNFT_CONTRACT_NAME, () => {
       expect(await sbnft.totalSupply()).to.equal(1);
       expect(await sbnft.tokenByIndex(0)).to.equal(0);
       expect(await sbnft.tokenURI(0)).to.equal("");
-      expect(await sbnft.tokenType(0)).to.equal(1);
-      expect(await sbnft.typeSupply(1)).to.equal(1);
-      expect(await sbnft.typeBalanceOf(holder1.address, 1)).to.equal(1);
+      expect(await sbnft.tokenType(0)).to.equal(0);
+      expect(await sbnft.typeSupply(0)).to.equal(1);
+      expect(await sbnft.typeBalanceOf(holder1.address, 0)).to.equal(1);
       expect(await sbnft.holdingPeriod(0)).to.equal(0);
 
       // time passed
@@ -353,29 +297,28 @@ describe(SBNFT_CONTRACT_NAME, () => {
       }
     });
 
-    it("success -> failure: AlreadyAirdropped -> success", async () => {
+    it("success -> failure: AlreadyAirdropped", async () => {
       // unpause: success
       await sbnft.unpause();
 
       // addMinter: success
       await sbnft.addMinter(minter.address);
 
-      // airdropByType: success
-      await sbnft.connect(minter).airdropByType(holder1.address, 1);
+      // airdrop: success
+      await sbnft.connect(minter).airdrop(holder1.address);
 
-      // airdropByType: failure: AlreadyAirdropped
-      await expect(sbnft.connect(minter).airdropByType(holder1.address, 1))
+      // airdrop: failure: AlreadyAirdropped
+      await expect(sbnft.connect(minter).airdrop(holder1.address))
         .to.be.revertedWithCustomError(sbnft, "AlreadyAirdropped")
-        .withArgs(1, holder1.address);
+        .withArgs(holder1.address);
+    });
+  });
 
-      // airdropByType: success
-      await sbnft.connect(minter).airdropByType(holder1.address, 2);
-
-      expect(await sbnft.balanceOf(holder1)).to.equal(2);
-      expect(await sbnft.ownerOf(0)).to.equal(holder1.address);
-      expect(await sbnft.ownerOf(1)).to.equal(holder1.address);
-      expect(await sbnft.typeBalanceOf(holder1, 1)).to.equal(1);
-      expect(await sbnft.typeBalanceOf(holder1, 2)).to.equal(1);
+  describe("airdropByType", () => {
+    it("failure: UnsupportedFunction", async () => {
+      await expect(
+        sbnft.connect(minter).airdropByType(holder1.address, 0)
+      ).to.be.revertedWithCustomError(sbnft, "UnsupportedFunction");
     });
   });
 
@@ -387,11 +330,9 @@ describe(SBNFT_CONTRACT_NAME, () => {
     });
   });
 
-  describe("bulkAirdropByType", () => {
+  describe("bulkAirdrop", () => {
     it("failure: InvalidMinter", async () => {
-      await expect(
-        sbnft.connect(minter).bulkAirdropByType([holder1.address], 1)
-      )
+      await expect(sbnft.connect(minter).bulkAirdrop([holder1.address]))
         .to.be.revertedWithCustomError(sbnft, "InvalidMinter")
         .withArgs(minter.address);
     });
@@ -400,32 +341,10 @@ describe(SBNFT_CONTRACT_NAME, () => {
       // addMinter: success
       await sbnft.addMinter(minter.address);
 
-      // bulkAirdropByType: failure: EnforcedPause
+      // bulkAirdrop: failure: EnforcedPause
       await expect(
-        sbnft.connect(minter).bulkAirdropByType([holder1.address], 1)
+        sbnft.connect(minter).bulkAirdrop([holder1.address])
       ).to.be.revertedWithCustomError(sbnft, "EnforcedPause");
-    });
-
-    it("failure: InvalidTokenType", async () => {
-      // unpause: success
-      await sbnft.unpause();
-
-      // addMinter: success
-      await sbnft.addMinter(minter.address);
-
-      // bulkAirdropByType: failure: InvalidTokenType
-      await expect(
-        sbnft.connect(minter).bulkAirdropByType([holder1.address], 0)
-      )
-        .to.be.revertedWithCustomError(sbnft, "InvalidTokenType")
-        .withArgs(0);
-      await expect(
-        sbnft
-          .connect(minter)
-          .bulkAirdropByType([holder1.address], SBNFT_MAX_TOKEN_TYPE + 1)
-      )
-        .to.be.revertedWithCustomError(sbnft, "InvalidTokenType")
-        .withArgs(SBNFT_MAX_TOKEN_TYPE + 1);
     });
 
     it("success", async () => {
@@ -436,16 +355,14 @@ describe(SBNFT_CONTRACT_NAME, () => {
       await sbnft.addMinter(minter.address);
 
       expect(await sbnft.balanceOf(holder1.address)).to.equal(0);
-      expect(await sbnft.typeBalanceOf(holder1.address, 1)).to.equal(0);
+      expect(await sbnft.typeBalanceOf(holder1.address, 0)).to.equal(0);
 
       expect(await sbnft.balanceOf(holder2.address)).to.equal(0);
-      expect(await sbnft.typeBalanceOf(holder2.address, 1)).to.equal(0);
+      expect(await sbnft.typeBalanceOf(holder2.address, 0)).to.equal(0);
 
-      // bulkAirdropByType: success
+      // bulkAirdrop: success
       await expect(
-        sbnft
-          .connect(minter)
-          .bulkAirdropByType([holder1.address, holder2.address], 1)
+        sbnft.connect(minter).bulkAirdrop([holder1.address, holder2.address])
       )
         .to.emit(sbnft, "Transfer")
         .withArgs(ethers.ZeroAddress, holder1.address, 0)
@@ -458,38 +375,27 @@ describe(SBNFT_CONTRACT_NAME, () => {
 
       expect(await sbnft.balanceOf(holder1.address)).to.equal(1);
       expect(await sbnft.ownerOf(0)).to.equal(holder1.address);
-      expect(await sbnft.typeBalanceOf(holder1.address, 1)).to.equal(1);
+      expect(await sbnft.typeBalanceOf(holder1.address, 0)).to.equal(1);
 
       expect(await sbnft.balanceOf(holder2.address)).to.equal(1);
       expect(await sbnft.ownerOf(1)).to.equal(holder2.address);
-      expect(await sbnft.typeBalanceOf(holder2.address, 1)).to.equal(1);
+      expect(await sbnft.typeBalanceOf(holder2.address, 0)).to.equal(1);
     });
 
-    it("success -> failure: AlreadyAirdropped -> success", async () => {
+    it("success -> failure: AlreadyAirdropped", async () => {
       // unpause: success
       await sbnft.unpause();
 
       // addMinter: success
       await sbnft.addMinter(minter.address);
 
-      // bulkAirdropByType: success
-      await sbnft.connect(minter).bulkAirdropByType([holder1.address], 1);
+      // bulkAirdrop: success
+      await sbnft.connect(minter).bulkAirdrop([holder1.address]);
 
-      // bulkAirdropByType: failure: AlreadyAirdropped
-      await expect(
-        sbnft.connect(minter).bulkAirdropByType([holder1.address], 1)
-      )
+      // bulkAirdrop: failure: AlreadyAirdropped
+      await expect(sbnft.connect(minter).bulkAirdrop([holder1.address]))
         .to.be.revertedWithCustomError(sbnft, "AlreadyAirdropped")
-        .withArgs(1, holder1.address);
-
-      // bulkAirdropByType: success
-      await sbnft.connect(minter).bulkAirdropByType([holder1.address], 2);
-
-      expect(await sbnft.balanceOf(holder1)).to.equal(2);
-      expect(await sbnft.ownerOf(0)).to.equal(holder1.address);
-      expect(await sbnft.ownerOf(1)).to.equal(holder1.address);
-      expect(await sbnft.typeBalanceOf(holder1, 1)).to.equal(1);
-      expect(await sbnft.typeBalanceOf(holder1, 2)).to.equal(1);
+        .withArgs(holder1.address);
     });
   });
 
@@ -501,8 +407,8 @@ describe(SBNFT_CONTRACT_NAME, () => {
       // addMinter: success
       await sbnft.addMinter(minter.address);
 
-      // airdropByType: success
-      await sbnft.connect(minter).airdropByType(holder1.address, 1);
+      // airdrop: success
+      await sbnft.connect(minter).airdrop(holder1.address);
 
       // safeTransferFrom: failure: Soulbound
       await expect(
@@ -531,8 +437,8 @@ describe(SBNFT_CONTRACT_NAME, () => {
       // addMinter: success
       await sbnft.addMinter(minter.address);
 
-      // airdropByType: success
-      await sbnft.connect(minter).airdropByType(holder1.address, 1);
+      // airdrop: success
+      await sbnft.connect(minter).airdrop(holder1.address);
 
       // burn: failure: ERC721InsufficientApproval
       await expect(sbnft.burn(0))
@@ -547,8 +453,8 @@ describe(SBNFT_CONTRACT_NAME, () => {
       // addMinter: success
       await sbnft.addMinter(minter.address);
 
-      // airdropByType: success
-      await sbnft.connect(minter).airdropByType(holder1.address, 1);
+      // airdrop: success
+      await sbnft.connect(minter).airdrop(holder1.address);
 
       expect(await sbnft.balanceOf(holder1.address)).to.equal(1);
       expect(await sbnft.ownerOf(0)).to.equal(holder1.address);
@@ -556,9 +462,9 @@ describe(SBNFT_CONTRACT_NAME, () => {
       expect(await sbnft.totalSupply()).to.equal(1);
       expect(await sbnft.tokenByIndex(0)).to.equal(0);
       expect(await sbnft.tokenURI(0)).to.equal("");
-      expect(await sbnft.tokenType(0)).to.equal(1);
-      expect(await sbnft.typeSupply(1)).to.equal(1);
-      expect(await sbnft.typeBalanceOf(holder1.address, 1)).to.equal(1);
+      expect(await sbnft.tokenType(0)).to.equal(0);
+      expect(await sbnft.typeSupply(0)).to.equal(1);
+      expect(await sbnft.typeBalanceOf(holder1.address, 0)).to.equal(1);
       expect(await sbnft.holdingPeriod(0)).to.equal(0);
 
       // burn: success
@@ -585,8 +491,8 @@ describe(SBNFT_CONTRACT_NAME, () => {
       await expect(sbnft.tokenType(0))
         .to.be.revertedWithCustomError(sbnft, "ERC721NonexistentToken")
         .withArgs(0);
-      expect(await sbnft.typeSupply(1)).to.equal(0);
-      expect(await sbnft.typeBalanceOf(holder1.address, 1)).to.equal(0);
+      expect(await sbnft.typeSupply(0)).to.equal(0);
+      expect(await sbnft.typeBalanceOf(holder1.address, 0)).to.equal(0);
       await expect(sbnft.holdingPeriod(0))
         .to.be.revertedWithCustomError(sbnft, "ERC721NonexistentToken")
         .withArgs(0);
@@ -676,8 +582,8 @@ describe(SBNFT_CONTRACT_NAME, () => {
       // addMinter: success
       await sbnft.addMinter(minter.address);
 
-      // airdropByType: success
-      await sbnft.connect(minter).airdropByType(holder1.address, 1);
+      // airdrop: success
+      await sbnft.connect(minter).airdrop(holder1.address);
 
       // refreshMetadata: success: single
       await expect(sbnft.refreshMetadata())
@@ -692,9 +598,9 @@ describe(SBNFT_CONTRACT_NAME, () => {
       // addMinter: success
       await sbnft.addMinter(minter.address);
 
-      // airdropByType: success
-      await sbnft.connect(minter).airdropByType(holder1.address, 1);
-      await sbnft.connect(minter).airdropByType(holder2.address, 1);
+      // airdrop: success
+      await sbnft.connect(minter).airdrop(holder1.address);
+      await sbnft.connect(minter).airdrop(holder2.address);
 
       // refreshMetadata: success: plural
       await expect(sbnft.refreshMetadata())

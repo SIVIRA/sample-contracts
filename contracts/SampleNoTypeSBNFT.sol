@@ -9,7 +9,7 @@ import {BaseSBNFT} from "./BaseSBNFT.sol";
 error ArgumentLengthMismatch();
 error AlreadyAirdropped(address to);
 
-contract NoTypeSBNFT is IERC4906, IAirdroppableNFT, BaseSBNFT {
+contract SampleNoTypeSBNFT is IERC4906, IAirdroppableNFT, BaseSBNFT {
     uint256 private constant _TOKEN_TYPE = 0;
 
     uint256 private _tokenIDCounter;
@@ -19,8 +19,8 @@ contract NoTypeSBNFT is IERC4906, IAirdroppableNFT, BaseSBNFT {
     constructor()
         BaseSBNFT(
             _msgSender(),
-            "No Type SBNFT",
-            "NTSBNFT",
+            "Sample No Type SBNFT",
+            "SNTSBNFT",
             _TOKEN_TYPE,
             _TOKEN_TYPE
         )
