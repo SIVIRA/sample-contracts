@@ -43,7 +43,7 @@ describe(SFT_CONTRACT_NAME, () => {
     });
   });
 
-  describe("pausable", () => {
+  describe("pause, unpause", () => {
     it("all", async () => {
       // pause: failure: EnforcedPause
       await expect(sft.pause()).to.be.revertedWithCustomError(
@@ -191,11 +191,11 @@ describe(SFT_CONTRACT_NAME, () => {
     });
   });
 
-  describe("uri", () => {
+  describe("setURI, freezeURI", () => {
+    const TOKEN_URI = "https://sft-metadata.com/0x0";
+
     it("failure: OwnableUnauthorizedAccount", async () => {
-      await expect(
-        sft.connect(minter).setURI(0, "https://example.com/tokens/0.json")
-      )
+      await expect(sft.connect(minter).setURI(0, TOKEN_URI))
         .to.be.revertedWithCustomError(sft, "OwnableUnauthorizedAccount")
         .withArgs(minter.address);
 
@@ -205,37 +205,51 @@ describe(SFT_CONTRACT_NAME, () => {
     });
 
     it("failure: TokenUnregistered", async () => {
-      await expect(sft.setURI(999, "https://example.com/tokens/999.json"))
+      await expect(sft.setURI(0, TOKEN_URI))
         .to.be.revertedWithCustomError(sft, "TokenUnregistered")
-        .withArgs(999);
+        .withArgs(0);
+
+      await expect(sft.freezeURI(0))
+        .to.be.revertedWithCustomError(sft, "TokenUnregistered")
+        .withArgs(0);
     });
 
     it("success -> failure: TokenURIFrozen", async () => {
+      // unpause: success
       await sft.unpause();
-      await sft.registerToken(1, "", 1);
+
+      // addMinter: success
       await sft.addMinter(minter.address);
-      await sft.connect(minter).airdrop(holder1.address, 1, 1);
-      expect(await sft.uri(1)).to.equal("");
-      await sft.setURI(1, "https://example.com/tokens/1.json");
-      expect(await sft.uri(1)).to.equal("https://example.com/tokens/1.json");
 
-      const updatedUri = "https://updated.com/tokens/1.json";
-      await expect(sft.setURI(1, updatedUri))
+      // registerToken: success
+      await sft.registerToken(0, "", 1);
+
+      // airdrop: success
+      await sft.connect(minter).airdrop(holder1.address, 0, 1);
+
+      // setURI: success
+      await expect(sft.setURI(0, TOKEN_URI))
         .to.emit(sft, "URI")
-        .withArgs(updatedUri, 1);
-      expect(await sft.uri(1)).to.equal(updatedUri);
+        .withArgs(TOKEN_URI, 0);
 
-      await expect(sft.freezeURI(1))
+      expect(await sft.uri(0)).to.equal(TOKEN_URI);
+
+      // freezeURI: success
+      await expect(sft.freezeURI(0))
         .to.emit(sft, "PermanentURI")
-        .withArgs(updatedUri, 1);
-      expect(await sft.uri(1)).to.equal(updatedUri);
+        .withArgs(TOKEN_URI, 0);
 
-      await expect(sft.setURI(1, "https://example.com/tokens/1.json"))
+      expect(await sft.uri(0)).to.equal(TOKEN_URI);
+
+      // setURI: failure: TokenURIFrozen
+      await expect(sft.setURI(0, TOKEN_URI))
         .to.be.revertedWithCustomError(sft, "TokenURIFrozen")
-        .withArgs(1);
-      await expect(sft.freezeURI(1))
+        .withArgs(0);
+
+      // freezeURI: failure: TokenURIFrozen
+      await expect(sft.freezeURI(0))
         .to.be.revertedWithCustomError(sft, "TokenURIFrozen")
-        .withArgs(1);
+        .withArgs(0);
     });
   });
 
@@ -290,7 +304,7 @@ describe(SFT_CONTRACT_NAME, () => {
     });
   });
 
-  describe("royalty", () => {
+  describe("setDefaultRoyalty, freezeRoyalty", () => {
     const feeNumerator = BigInt(300);
     const feeDenominator = BigInt(10000);
     const salePrice = ethers.parseEther("1");
@@ -321,6 +335,7 @@ describe(SFT_CONTRACT_NAME, () => {
       // addMinter: success
       await sft.addMinter(minter.address);
 
+      // registerToken: success
       await sft.registerToken(0, "", 1);
 
       // airdrop: success
@@ -348,7 +363,7 @@ describe(SFT_CONTRACT_NAME, () => {
     });
   });
 
-  describe("minter", () => {
+  describe("addMinter, removeMinter, freezeMinters", () => {
     it("all", async () => {
       expect(await sft.isMinter(minter.address)).to.be.false;
 
