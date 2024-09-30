@@ -27,6 +27,9 @@ importers:
       '@nomicfoundation/hardhat-toolbox':
         specifier: 5.0.0
         version: 5.0.0(lpe7n2q7pb6o5jxll2auni4cqa)
+      '@nomicfoundation/hardhat-verify':
+        specifier: 2.0.11
+        version: 2.0.11(hardhat@2.22.12(ts-node@10.9.2(@types/node@22.7.4)(typescript@5.6.2))(typescript@5.6.2))
       '@types/chai':
         specifier: 4.3.19
         version: 4.3.19
@@ -603,9 +606,6 @@ packages:
 
   '@types/node@18.15.13':
     resolution: {integrity: sha512-N+0kuo9KgrUQ1Sn/ifDXsvg0TTleP7rIy4zOBGECxAljqvqfqpTfzx0Q1NUedOixRMBfe2Whhb056a42cWs26Q==}
-
-  '@types/node@22.5.1':
-    resolution: {integrity: sha512-KkHsxej0j9IW1KKOOAA/XBA0z08UFSrRQHErzEfA3Vgq57eXIMYboIlHJuYIfd+lwCQjtKqUu3UnmKbtUc9yRw==}
 
   '@types/node@22.7.4':
     resolution: {integrity: sha512-y+NPi1rFzDs1NdQHHToqeiX2TIS79SWEAw9GYhkkx8bD0ChpfqC+n2j5OXOCpzfojBEBt6DnEnnG9MY0zk1XLg==}
@@ -3466,7 +3466,7 @@ snapshots:
   '@types/glob@7.2.0':
     dependencies:
       '@types/minimatch': 5.1.2
-      '@types/node': 22.5.1
+      '@types/node': 22.7.4
 
   '@types/lru-cache@5.1.1': {}
 
@@ -3477,10 +3477,6 @@ snapshots:
   '@types/node@10.17.60': {}
 
   '@types/node@18.15.13': {}
-
-  '@types/node@22.5.1':
-    dependencies:
-      undici-types: 6.19.8
 
   '@types/node@22.7.4':
     dependencies:

@@ -2,6 +2,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import { NetworksUserConfig } from "hardhat/types";
 
 import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-verify";
 
 const networks: NetworksUserConfig = {};
 if (
