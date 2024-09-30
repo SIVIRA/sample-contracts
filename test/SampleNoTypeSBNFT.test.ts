@@ -415,6 +415,8 @@ describe(SBNFT_CONTRACT_NAME, () => {
   });
 
   describe("burn", () => {
+    const TOKEN_URI = "https://sbnft-metadata.world/0x0" as const;
+
     it("failure: ERC721NonexistentToken", async () => {
       await expect(sbnft.burn(0))
         .to.be.revertedWithCustomError(sbnft, "ERC721NonexistentToken")
@@ -447,16 +449,26 @@ describe(SBNFT_CONTRACT_NAME, () => {
       // airdropWithTokenURI: success
       await sbnft.connect(minter).airdropWithTokenURI(holder1.address, "");
 
-      expect(await sbnft.balanceOf(holder1.address)).to.equal(1);
-      expect(await sbnft.ownerOf(0)).to.equal(holder1.address);
-      expect(await sbnft.tokenOfOwnerByIndex(holder1.address, 0)).to.equal(0);
-      expect(await sbnft.totalSupply()).to.equal(1);
-      expect(await sbnft.tokenByIndex(0)).to.equal(0);
-      expect(await sbnft.tokenURI(0)).to.equal("");
-      expect(await sbnft.tokenType(0)).to.equal(0);
-      expect(await sbnft.typeSupply(0)).to.equal(1);
-      expect(await sbnft.typeBalanceOf(holder1.address, 0)).to.equal(1);
-      expect(await sbnft.holdingPeriod(0)).to.equal(0);
+      const holdingStartedAt = await utils.now();
+
+      // setTokenURI: success
+      await sbnft.setTokenURI(0, TOKEN_URI);
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await sbnft.balanceOf(holder1.address)).to.equal(1);
+        expect(await sbnft.ownerOf(0)).to.equal(holder1.address);
+        expect(await sbnft.tokenOfOwnerByIndex(holder1.address, 0)).to.equal(0);
+        expect(await sbnft.totalSupply()).to.equal(1);
+        expect(await sbnft.tokenByIndex(0)).to.equal(0);
+        expect(await sbnft.tokenURI(0)).to.equal(TOKEN_URI);
+        expect(await sbnft.tokenType(0)).to.equal(0);
+        expect(await sbnft.typeSupply(0)).to.equal(1);
+        expect(await sbnft.typeBalanceOf(holder1.address, 0)).to.equal(1);
+        expect(await sbnft.holdingPeriod(0)).to.equal(now - holdingStartedAt);
+      }
 
       // burn: success
       await expect(sbnft.connect(holder1).burn(0))
