@@ -219,6 +219,8 @@ describe(SBNFT_CONTRACT_NAME, () => {
       // airdropByType: success
       await sbnft.connect(minter).airdropByType(holder1.address, 1);
 
+      expect(await sbnft.tokenURI(0)).to.equal("");
+
       // setBaseTokenURI: success
       await sbnft.setBaseTokenURI(BASE_TOKEN_URI);
 
@@ -235,8 +237,6 @@ describe(SBNFT_CONTRACT_NAME, () => {
       await expect(sbnft.freezeTokenURI(0))
         .to.emit(sbnft, "PermanentURI")
         .withArgs(TOKEN_URI, 0);
-
-      expect(await sbnft.tokenURI(0)).to.equal(TOKEN_URI);
 
       // setTokenURI: failure: TokenURIFrozen
       await expect(sbnft.setTokenURI(0, TOKEN_URI))

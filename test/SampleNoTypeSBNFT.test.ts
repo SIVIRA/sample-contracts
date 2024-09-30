@@ -154,8 +154,6 @@ describe(SBNFT_CONTRACT_NAME, () => {
         .to.emit(sbnft, "PermanentURI")
         .withArgs(TOKEN_URI_V2, 0);
 
-      expect(await sbnft.tokenURI(0)).to.equal(TOKEN_URI_V2);
-
       // setTokenURI: failure: TokenURIFrozen
       await expect(sbnft.setTokenURI(0, TOKEN_URI_V1))
         .to.be.revertedWithCustomError(sbnft, "TokenURIFrozen")

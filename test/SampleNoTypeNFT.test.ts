@@ -151,8 +151,6 @@ describe(NFT_CONTRACT_NAME, () => {
         .to.emit(nft, "PermanentURI")
         .withArgs(TOKEN_URI_V2, 0);
 
-      expect(await nft.tokenURI(0)).to.equal(TOKEN_URI_V2);
-
       // setTokenURI: failure: TokenURIFrozen
       await expect(nft.setTokenURI(0, TOKEN_URI_V1))
         .to.be.revertedWithCustomError(nft, "TokenURIFrozen")

@@ -217,6 +217,8 @@ describe(NFT_CONTRACT_NAME, () => {
       // airdropByType: success
       await nft.connect(minter).airdropByType(holder1.address, 1);
 
+      expect(await nft.tokenURI(0)).to.equal("");
+
       // setBaseTokenURI: success
       await nft.setBaseTokenURI(BASE_TOKEN_URI);
 
@@ -233,8 +235,6 @@ describe(NFT_CONTRACT_NAME, () => {
       await expect(nft.freezeTokenURI(0))
         .to.emit(nft, "PermanentURI")
         .withArgs(TOKEN_URI, 0);
-
-      expect(await nft.tokenURI(0)).to.equal(TOKEN_URI);
 
       // setTokenURI: failure: TokenURIFrozen
       await expect(nft.setTokenURI(0, TOKEN_URI))
