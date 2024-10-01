@@ -139,6 +139,8 @@ contract BaseNFT is
     }
 
     function typeSupply(uint256 tokenType_) external view returns (uint256) {
+        _requireValidTokenType(tokenType_);
+
         return _typeSupplies[tokenType_];
     }
 
@@ -146,6 +148,8 @@ contract BaseNFT is
         address owner_,
         uint256 tokenType_
     ) external view returns (uint256) {
+        _requireValidTokenType(tokenType_);
+
         require(owner_ != address(0), ERC721InvalidOwner(address(0)));
 
         return _typeBalances[owner_][tokenType_];
@@ -297,6 +301,13 @@ contract BaseNFT is
         _requireMintersNotFrozen();
 
         _isMintersFrozen = true;
+    }
+
+    function _requireValidTokenType(uint256 tokenType_) internal view {
+        require(
+            _minTokenType <= tokenType_ && tokenType_ <= _maxTokenType,
+            InvalidTokenType(tokenType_)
+        );
     }
 
     function _requireTokenTypeRangeNotFrozen() internal view {
