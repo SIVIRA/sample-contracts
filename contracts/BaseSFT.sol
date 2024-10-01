@@ -166,6 +166,26 @@ contract BaseSFT is
         _isSupplyCapFrozens[tokenID_] = true;
     }
 
+    function balanceOf(
+        address owner_,
+        uint256 tokenID_
+    ) public view virtual override returns (uint256) {
+        _requireTokenRegistered(tokenID_);
+
+        return super.balanceOf(owner_, tokenID_);
+    }
+
+    function balanceOfBatch(
+        address[] memory owners_,
+        uint256[] memory tokenIDs_
+    ) public view virtual override returns (uint256[] memory) {
+        for (uint256 i = 0; i < tokenIDs_.length; i++) {
+            _requireTokenRegistered(tokenIDs_[i]);
+        }
+
+        return super.balanceOfBatch(owners_, tokenIDs_);
+    }
+
     function uri(
         uint256 tokenID_
     ) public view override returns (string memory) {
@@ -218,6 +238,32 @@ contract BaseSFT is
         }
 
         return block.timestamp - _holdingStartedAts[tokenID_][holder_];
+    }
+
+    function safeTransferFrom(
+        address from_,
+        address to_,
+        uint256 tokenID_,
+        uint256 amount_,
+        bytes memory data_
+    ) public virtual override {
+        _requireTokenRegistered(tokenID_);
+
+        super.safeTransferFrom(from_, to_, tokenID_, amount_, data_);
+    }
+
+    function safeBatchTransferFrom(
+        address from_,
+        address to_,
+        uint256[] memory tokenIDs_,
+        uint256[] memory amounts_,
+        bytes memory data_
+    ) public virtual override {
+        for (uint256 i = 0; i < tokenIDs_.length; i++) {
+            _requireTokenRegistered(tokenIDs_[i]);
+        }
+
+        super.safeBatchTransferFrom(from_, to_, tokenIDs_, amounts_, data_);
     }
 
     function burn(
