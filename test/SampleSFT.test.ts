@@ -405,7 +405,7 @@ describe(SFT_CONTRACT_NAME, () => {
       // airdrop: success
       await sft.connect(minter).airdrop(holder1.address, 1, 4);
 
-      const holdingStartedAt11 = await utils.now();
+      let holdingStartedAt11 = await utils.now();
 
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(4);
       expect(await sft.balanceOf(holder2.address, 1)).to.equal(0);
@@ -467,6 +467,34 @@ describe(SFT_CONTRACT_NAME, () => {
           now - holdingStartedAt21
         );
       }
+
+      // safeTransferFrom: success
+      await expect(
+        sft
+          .connect(holder2)
+          .safeTransferFrom(holder2.address, holder1.address, 1, 3, "0x")
+      )
+        .to.emit(sft, "TransferSingle")
+        .withArgs(holder2.address, holder2.address, holder1.address, 1, 3);
+
+      holdingStartedAt11 = await utils.now();
+
+      expect(await sft.balanceOf(holder1.address, 1)).to.equal(4);
+      expect(await sft.balanceOf(holder2.address, 1)).to.equal(0);
+      expect(await sft["totalSupply()"]()).to.equal(4);
+      expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+      expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(
+          now - holdingStartedAt11
+        );
+        expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+      }
     });
   });
 
@@ -499,7 +527,7 @@ describe(SFT_CONTRACT_NAME, () => {
       // airdrop: success
       await sft.connect(minter).airdrop(holder1.address, 1, 4);
 
-      const holdingStartedAt11 = await utils.now();
+      let holdingStartedAt11 = await utils.now();
 
       // airdrop: success
       await sft.connect(minter).airdrop(holder1.address, 2, 4);
@@ -631,8 +659,6 @@ describe(SFT_CONTRACT_NAME, () => {
       const holdingStartedAt22 = await utils.now();
 
       {
-        const now = await utils.now();
-
         {
           const [balance11, balance12, balance21, balance22] =
             await sft.balanceOfBatch(
@@ -663,6 +689,73 @@ describe(SFT_CONTRACT_NAME, () => {
         const now = await helpers.time.increase(DUMMY_PERIOD);
 
         expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+        expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 2)).to.equal(
+          now - holdingStartedAt22
+        );
+      }
+
+      // safeBatchTransferFrom: success
+      await expect(
+        sft
+          .connect(holder2)
+          .safeBatchTransferFrom(
+            holder2.address,
+            holder1.address,
+            [1, 2],
+            [2, 1],
+            "0x"
+          )
+      )
+        .to.emit(sft, "TransferBatch")
+        .withArgs(
+          holder2.address,
+          holder2.address,
+          holder1.address,
+          [1, 2],
+          [2, 1]
+        );
+
+      holdingStartedAt11 = await utils.now();
+
+      {
+        const now = await utils.now();
+
+        {
+          const [balance11, balance12, balance21, balance22] =
+            await sft.balanceOfBatch(
+              [
+                holder1.address,
+                holder1.address,
+                holder2.address,
+                holder2.address,
+              ],
+              [1, 2, 1, 2]
+            );
+          expect(balance11).to.equal(4);
+          expect(balance12).to.equal(1);
+          expect(balance21).to.equal(0);
+          expect(balance22).to.equal(3);
+        }
+        expect(await sft["totalSupply()"]()).to.equal(8);
+        expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
+        expect(await sft["totalSupply(uint256)"](2)).to.equal(4);
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+        expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 2)).to.equal(
+          now - holdingStartedAt22
+        );
+      }
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(
+          now - holdingStartedAt11
+        );
         expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
         expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
         expect(await sft.holdingPeriod(holder2, 2)).to.equal(
