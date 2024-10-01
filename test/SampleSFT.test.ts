@@ -344,7 +344,9 @@ describe(SFT_CONTRACT_NAME, () => {
       expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
 
       // airdrop: success
-      await sft.connect(minter).airdrop(holder1.address, 1, 1);
+      await expect(sft.connect(minter).airdrop(holder1.address, 1, 1))
+        .to.emit(sft, "TransferSingle")
+        .withArgs(minter.address, ethers.ZeroAddress, holder1.address, 1, 1);
 
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
       expect(await sft["totalSupply()"]()).to.equal(1);
@@ -359,7 +361,9 @@ describe(SFT_CONTRACT_NAME, () => {
       }
 
       // airdrop: success
-      await sft.connect(minter).airdrop(holder1.address, 1, 2);
+      await expect(sft.connect(minter).airdrop(holder1.address, 1, 2))
+        .to.emit(sft, "TransferSingle")
+        .withArgs(minter.address, ethers.ZeroAddress, holder1.address, 1, 2);
 
       const holdingStartedAt = await utils.now();
 
