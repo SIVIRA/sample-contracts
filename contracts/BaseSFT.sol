@@ -166,6 +166,26 @@ contract BaseSFT is
         _isSupplyCapFrozens[tokenID_] = true;
     }
 
+    function balanceOf(
+        address owner_,
+        uint256 tokenID_
+    ) public view virtual override returns (uint256) {
+        _requireTokenRegistered(tokenID_);
+
+        return super.balanceOf(owner_, tokenID_);
+    }
+
+    function balanceOfBatch(
+        address[] memory owners_,
+        uint256[] memory tokenIDs_
+    ) public view virtual override returns (uint256[] memory) {
+        for (uint256 i = 0; i < tokenIDs_.length; i++) {
+            _requireTokenRegistered(tokenIDs_[i]);
+        }
+
+        return super.balanceOfBatch(owners_, tokenIDs_);
+    }
+
     function uri(
         uint256 tokenID_
     ) public view override returns (string memory) {
