@@ -543,19 +543,23 @@ describe(SFT_CONTRACT_NAME, () => {
 
       const holdingStartedAt1 = await utils.now();
 
-      expect(await sft.balanceOf(holder1.address, 1)).to.equal(4);
-      expect(await sft["totalSupply()"]()).to.equal(4);
-      expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
-      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
-
       // airdrop: success
       await sft.connect(minter).airdrop(holder1.address, 2, 4);
 
       const holdingStartedAt2 = await utils.now();
 
-      expect(await sft.balanceOf(holder1.address, 2)).to.equal(4);
+      {
+        const [balance1, balance2] = await sft.balanceOfBatch(
+          [holder1.address, holder1.address],
+          [1, 2]
+        );
+        expect(balance1).to.equal(4);
+        expect(balance2).to.equal(4);
+      }
       expect(await sft["totalSupply()"]()).to.equal(8);
+      expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
       expect(await sft["totalSupply(uint256)"](2)).to.equal(4);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(1);
       expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
 
       // time passed
@@ -586,8 +590,14 @@ describe(SFT_CONTRACT_NAME, () => {
       {
         const now = await utils.now();
 
-        expect(await sft.balanceOf(holder1.address, 1)).to.equal(3);
-        expect(await sft.balanceOf(holder1.address, 2)).to.equal(2);
+        {
+          const [balance1, balance2] = await sft.balanceOfBatch(
+            [holder1.address, holder1.address],
+            [1, 2]
+          );
+          expect(balance1).to.equal(3);
+          expect(balance2).to.equal(2);
+        }
         expect(await sft["totalSupply()"]()).to.equal(5);
         expect(await sft["totalSupply(uint256)"](1)).to.equal(3);
         expect(await sft["totalSupply(uint256)"](2)).to.equal(2);
@@ -620,8 +630,14 @@ describe(SFT_CONTRACT_NAME, () => {
           [2, 1]
         );
 
-      expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
-      expect(await sft.balanceOf(holder1.address, 2)).to.equal(1);
+      {
+        const [balance1, balance2] = await sft.balanceOfBatch(
+          [holder1.address, holder1.address],
+          [1, 2]
+        );
+        expect(balance1).to.equal(1);
+        expect(balance2).to.equal(1);
+      }
       expect(await sft["totalSupply()"]()).to.equal(2);
       expect(await sft["totalSupply(uint256)"](1)).to.equal(1);
       expect(await sft["totalSupply(uint256)"](2)).to.equal(1);
