@@ -499,6 +499,145 @@ describe(SFT_CONTRACT_NAME, () => {
     });
   });
 
+  describe("burnBatch", () => {
+    it("failure: TokenUnregistered", async () => {
+      await expect(sft.burnBatch(holder1.address, [1, 2], [1, 1]))
+        .to.be.revertedWithCustomError(sft, "TokenUnregistered")
+        .withArgs(1);
+    });
+
+    it("failure: ERC1155MissingApprovalForAll", async () => {
+      // unpause: success
+      await sft.unpause();
+
+      // addMinter: success
+      await sft.addMinter(minter.address);
+
+      // registerToken: success
+      await sft.registerToken(1, "", 1);
+      await sft.registerToken(2, "", 1);
+
+      // airdrop: success
+      await sft.connect(minter).airdrop(holder1.address, 1, 1);
+      await sft.connect(minter).airdrop(holder1.address, 2, 1);
+
+      // burnBatch: failure: ERC1155MissingApprovalForAll
+      await expect(sft.burnBatch(holder1.address, [1, 2], [1, 1]))
+        .to.be.revertedWithCustomError(sft, "ERC1155MissingApprovalForAll")
+        .withArgs(runner.address, holder1.address);
+    });
+
+    it("success", async () => {
+      // unpause: success
+      await sft.unpause();
+
+      // addMinter: success
+      await sft.addMinter(minter.address);
+
+      // registerToken: success
+      await sft.registerToken(1, "", 3);
+      await sft.registerToken(2, "", 3);
+
+      // airdrop: success
+      await sft.connect(minter).airdrop(holder1.address, 1, 4);
+
+      const holdingStartedAt1 = await utils.now();
+
+      expect(await sft.balanceOf(holder1.address, 1)).to.equal(4);
+      expect(await sft["totalSupply()"]()).to.equal(4);
+      expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+
+      // airdrop: success
+      await sft.connect(minter).airdrop(holder1.address, 2, 4);
+
+      const holdingStartedAt2 = await utils.now();
+
+      expect(await sft.balanceOf(holder1.address, 2)).to.equal(4);
+      expect(await sft["totalSupply()"]()).to.equal(8);
+      expect(await sft["totalSupply(uint256)"](2)).to.equal(4);
+      expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(
+          now - holdingStartedAt1
+        );
+        expect(await sft.holdingPeriod(holder1, 2)).to.equal(
+          now - holdingStartedAt2
+        );
+      }
+
+      // burnBatch: success
+      await expect(
+        sft.connect(holder1).burnBatch(holder1.address, [1, 2], [1, 2])
+      )
+        .to.emit(sft, "TransferBatch")
+        .withArgs(
+          holder1.address,
+          holder1.address,
+          ethers.ZeroAddress,
+          [1, 2],
+          [1, 2]
+        );
+
+      {
+        const now = await utils.now();
+
+        expect(await sft.balanceOf(holder1.address, 1)).to.equal(3);
+        expect(await sft.balanceOf(holder1.address, 2)).to.equal(2);
+        expect(await sft["totalSupply()"]()).to.equal(5);
+        expect(await sft["totalSupply(uint256)"](1)).to.equal(3);
+        expect(await sft["totalSupply(uint256)"](2)).to.equal(2);
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(
+          now - holdingStartedAt1
+        );
+        expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
+      }
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(
+          now - holdingStartedAt1
+        );
+        expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
+      }
+
+      // burnBatch: success
+      await expect(
+        sft.connect(holder1).burnBatch(holder1.address, [1, 2], [2, 1])
+      )
+        .to.emit(sft, "TransferBatch")
+        .withArgs(
+          holder1.address,
+          holder1.address,
+          ethers.ZeroAddress,
+          [1, 2],
+          [2, 1]
+        );
+
+      expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
+      expect(await sft.balanceOf(holder1.address, 2)).to.equal(1);
+      expect(await sft["totalSupply()"]()).to.equal(2);
+      expect(await sft["totalSupply(uint256)"](1)).to.equal(1);
+      expect(await sft["totalSupply(uint256)"](2)).to.equal(1);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+      expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
+
+      // time passed
+      {
+        await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+        expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
+      }
+    });
+  });
+
   describe("setDefaultRoyalty, freezeRoyalty", () => {
     const feeNumerator = BigInt(300);
     const feeDenominator = BigInt(10000);
