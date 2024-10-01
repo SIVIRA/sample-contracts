@@ -208,6 +208,12 @@ contract BaseNFT is
         return block.timestamp - _holdingStartedAts[tokenID_];
     }
 
+    function burn(uint256 tokenID_) external virtual {
+        _checkAuthorized(_ownerOf(tokenID_), _msgSender(), tokenID_);
+
+        _burn(tokenID_);
+    }
+
     function royaltyInfo(
         uint256 tokenID_,
         uint256 salePrice_
@@ -253,7 +259,7 @@ contract BaseNFT is
         address user_,
         uint64 expires_
     ) external {
-        _checkAuthorized(ownerOf(tokenID_), _msgSender(), tokenID_);
+        _checkAuthorized(_ownerOf(tokenID_), _msgSender(), tokenID_);
 
         UserInfo storage userInfo = _users[tokenID_];
         userInfo.user = user_;

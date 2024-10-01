@@ -178,6 +178,12 @@ contract BaseSBNFT is IERC4906, ERC721Enumerable, Ownable, Pausable {
         return block.timestamp - _holdingStartedAts[tokenID_];
     }
 
+    function burn(uint256 tokenID_) external virtual {
+        _checkAuthorized(_ownerOf(tokenID_), _msgSender(), tokenID_);
+
+        _burn(tokenID_);
+    }
+
     function isMinter(address minter_) external view returns (bool) {
         return _minters[minter_];
     }

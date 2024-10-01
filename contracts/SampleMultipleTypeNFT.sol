@@ -74,12 +74,6 @@ contract SampleMultipleTypeNFT is IERC4906, IAirdroppableNFT, BaseNFT {
         }
     }
 
-    function burn(uint256 tokenID_) external {
-        _checkAuthorized(ownerOf(tokenID_), _msgSender(), tokenID_);
-
-        _burn(tokenID_);
-    }
-
     function refreshMetadata() external onlyOwner {
         _refreshMetadata();
     }
