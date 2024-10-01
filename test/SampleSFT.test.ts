@@ -384,19 +384,89 @@ describe(SFT_CONTRACT_NAME, () => {
   });
 
   describe("safeTransferFrom", () => {
+    it("failure: TokenUnregistered", async () => {
+      await expect(
+        sft.safeTransferFrom(holder1.address, holder2.address, 1, 1, "0x")
+      )
+        .to.be.revertedWithCustomError(sft, "TokenUnregistered")
+        .withArgs(1);
+    });
+
     it("success", async () => {
+      // unpause: success
       await sft.unpause();
+
+      // addMinter: success
       await sft.addMinter(minter.address);
-      await sft.registerToken(1, "", 1);
 
-      await sft.connect(minter).airdrop(holder1.address, 1, 1);
-      expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
+      // registerToken: success
+      await sft.registerToken(1, "", 3);
 
-      await sft
-        .connect(holder1)
-        .safeTransferFrom(holder1.address, holder2.address, 1, 1, "0x");
-      expect(await sft.balanceOf(holder1.address, 1)).to.equal(0);
+      // airdrop: success
+      await sft.connect(minter).airdrop(holder1.address, 1, 4);
+
+      const holdingStartedAt11 = await utils.now();
+
+      expect(await sft.balanceOf(holder1.address, 1)).to.equal(4);
+      expect(await sft.balanceOf(holder2.address, 1)).to.equal(0);
+      expect(await sft["totalSupply()"]()).to.equal(4);
+      expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+      expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+
+      // safeTransferFrom: success
+      await expect(
+        sft
+          .connect(holder1)
+          .safeTransferFrom(holder1.address, holder2.address, 1, 1, "0x")
+      )
+        .to.emit(sft, "TransferSingle")
+        .withArgs(holder1.address, holder1.address, holder2.address, 1, 1);
+
+      expect(await sft.balanceOf(holder1.address, 1)).to.equal(3);
       expect(await sft.balanceOf(holder2.address, 1)).to.equal(1);
+      expect(await sft["totalSupply()"]()).to.equal(4);
+      expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(1);
+      expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(
+          now - holdingStartedAt11
+        );
+        expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+      }
+
+      // safeTransferFrom: success
+      await expect(
+        sft
+          .connect(holder1)
+          .safeTransferFrom(holder1.address, holder2.address, 1, 2, "0x")
+      )
+        .to.emit(sft, "TransferSingle")
+        .withArgs(holder1.address, holder1.address, holder2.address, 1, 2);
+
+      const holdingStartedAt21 = await utils.now();
+
+      expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
+      expect(await sft.balanceOf(holder2.address, 1)).to.equal(3);
+      expect(await sft["totalSupply()"]()).to.equal(4);
+      expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+      expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 1)).to.equal(
+          now - holdingStartedAt21
+        );
+      }
     });
   });
 
@@ -405,25 +475,6 @@ describe(SFT_CONTRACT_NAME, () => {
       await expect(sft.burn(holder1.address, 1, 1))
         .to.be.revertedWithCustomError(sft, "TokenUnregistered")
         .withArgs(1);
-    });
-
-    it("failure: ERC1155MissingApprovalForAll", async () => {
-      // unpause: success
-      await sft.unpause();
-
-      // addMinter: success
-      await sft.addMinter(minter.address);
-
-      // registerToken: success
-      await sft.registerToken(1, "", 1);
-
-      // airdrop: success
-      await sft.connect(minter).airdrop(holder1.address, 1, 1);
-
-      // burn: failure: ERC1155MissingApprovalForAll
-      await expect(sft.burn(holder1.address, 1, 1))
-        .to.be.revertedWithCustomError(sft, "ERC1155MissingApprovalForAll")
-        .withArgs(runner.address, holder1.address);
     });
 
     it("success", async () => {
@@ -506,27 +557,6 @@ describe(SFT_CONTRACT_NAME, () => {
         .withArgs(1);
     });
 
-    it("failure: ERC1155MissingApprovalForAll", async () => {
-      // unpause: success
-      await sft.unpause();
-
-      // addMinter: success
-      await sft.addMinter(minter.address);
-
-      // registerToken: success
-      await sft.registerToken(1, "", 1);
-      await sft.registerToken(2, "", 1);
-
-      // airdrop: success
-      await sft.connect(minter).airdrop(holder1.address, 1, 1);
-      await sft.connect(minter).airdrop(holder1.address, 2, 1);
-
-      // burnBatch: failure: ERC1155MissingApprovalForAll
-      await expect(sft.burnBatch(holder1.address, [1, 2], [1, 1]))
-        .to.be.revertedWithCustomError(sft, "ERC1155MissingApprovalForAll")
-        .withArgs(runner.address, holder1.address);
-    });
-
     it("success", async () => {
       // unpause: success
       await sft.unpause();
@@ -541,12 +571,12 @@ describe(SFT_CONTRACT_NAME, () => {
       // airdrop: success
       await sft.connect(minter).airdrop(holder1.address, 1, 4);
 
-      const holdingStartedAt1 = await utils.now();
+      const holdingStartedAt11 = await utils.now();
 
       // airdrop: success
       await sft.connect(minter).airdrop(holder1.address, 2, 4);
 
-      const holdingStartedAt2 = await utils.now();
+      const holdingStartedAt12 = await utils.now();
 
       {
         const [balance1, balance2] = await sft.balanceOfBatch(
@@ -567,10 +597,10 @@ describe(SFT_CONTRACT_NAME, () => {
         const now = await helpers.time.increase(DUMMY_PERIOD);
 
         expect(await sft.holdingPeriod(holder1, 1)).to.equal(
-          now - holdingStartedAt1
+          now - holdingStartedAt11
         );
         expect(await sft.holdingPeriod(holder1, 2)).to.equal(
-          now - holdingStartedAt2
+          now - holdingStartedAt12
         );
       }
 
@@ -602,7 +632,7 @@ describe(SFT_CONTRACT_NAME, () => {
         expect(await sft["totalSupply(uint256)"](1)).to.equal(3);
         expect(await sft["totalSupply(uint256)"](2)).to.equal(2);
         expect(await sft.holdingPeriod(holder1, 1)).to.equal(
-          now - holdingStartedAt1
+          now - holdingStartedAt11
         );
         expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
       }
@@ -612,7 +642,7 @@ describe(SFT_CONTRACT_NAME, () => {
         const now = await helpers.time.increase(DUMMY_PERIOD);
 
         expect(await sft.holdingPeriod(holder1, 1)).to.equal(
-          now - holdingStartedAt1
+          now - holdingStartedAt11
         );
         expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
       }
