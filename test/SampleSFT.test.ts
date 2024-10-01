@@ -470,6 +470,208 @@ describe(SFT_CONTRACT_NAME, () => {
     });
   });
 
+  describe("safeBatchTransferFrom", () => {
+    it("failure: TokenUnregistered", async () => {
+      await expect(
+        sft.safeBatchTransferFrom(
+          holder1.address,
+          holder2.address,
+          [1, 2],
+          [1, 1],
+          "0x"
+        )
+      )
+        .to.be.revertedWithCustomError(sft, "TokenUnregistered")
+        .withArgs(1);
+    });
+
+    it("success", async () => {
+      // unpause: success
+      await sft.unpause();
+
+      // addMinter: success
+      await sft.addMinter(minter.address);
+
+      // registerToken: success
+      await sft.registerToken(1, "", 3);
+      await sft.registerToken(2, "", 3);
+
+      // airdrop: success
+      await sft.connect(minter).airdrop(holder1.address, 1, 4);
+
+      const holdingStartedAt11 = await utils.now();
+
+      // airdrop: success
+      await sft.connect(minter).airdrop(holder1.address, 2, 4);
+
+      const holdingStartedAt12 = await utils.now();
+
+      {
+        const [balance11, balance12, balance21, balance22] =
+          await sft.balanceOfBatch(
+            [
+              holder1.address,
+              holder1.address,
+              holder2.address,
+              holder2.address,
+            ],
+            [1, 2, 1, 2]
+          );
+        expect(balance11).to.equal(4);
+        expect(balance12).to.equal(4);
+        expect(balance21).to.equal(0);
+        expect(balance22).to.equal(0);
+      }
+      expect(await sft["totalSupply()"]()).to.equal(8);
+      expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
+      expect(await sft["totalSupply(uint256)"](2)).to.equal(4);
+      expect(await sft.holdingPeriod(holder1, 1)).to.equal(1);
+      expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
+      expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+      expect(await sft.holdingPeriod(holder2, 2)).to.equal(0);
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(
+          now - holdingStartedAt11
+        );
+        expect(await sft.holdingPeriod(holder1, 2)).to.equal(
+          now - holdingStartedAt12
+        );
+        expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 2)).to.equal(0);
+      }
+
+      // safeBatchTransferFrom: success
+      await expect(
+        sft
+          .connect(holder1)
+          .safeBatchTransferFrom(
+            holder1.address,
+            holder2.address,
+            [1, 2],
+            [1, 2],
+            "0x"
+          )
+      )
+        .to.emit(sft, "TransferBatch")
+        .withArgs(
+          holder1.address,
+          holder1.address,
+          holder2.address,
+          [1, 2],
+          [1, 2]
+        );
+
+      {
+        const now = await utils.now();
+
+        {
+          const [balance11, balance12, balance21, balance22] =
+            await sft.balanceOfBatch(
+              [
+                holder1.address,
+                holder1.address,
+                holder2.address,
+                holder2.address,
+              ],
+              [1, 2, 1, 2]
+            );
+          expect(balance11).to.equal(3);
+          expect(balance12).to.equal(2);
+          expect(balance21).to.equal(1);
+          expect(balance22).to.equal(2);
+        }
+        expect(await sft["totalSupply()"]()).to.equal(8);
+        expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
+        expect(await sft["totalSupply(uint256)"](2)).to.equal(4);
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(
+          now - holdingStartedAt11
+        );
+        expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 2)).to.equal(0);
+      }
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(
+          now - holdingStartedAt11
+        );
+        expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 2)).to.equal(0);
+      }
+
+      // safeBatchTransferFrom: success
+      await expect(
+        sft
+          .connect(holder1)
+          .safeBatchTransferFrom(
+            holder1.address,
+            holder2.address,
+            [1, 2],
+            [1, 2],
+            "0x"
+          )
+      )
+        .to.emit(sft, "TransferBatch")
+        .withArgs(
+          holder1.address,
+          holder1.address,
+          holder2.address,
+          [1, 2],
+          [1, 2]
+        );
+
+      const holdingStartedAt22 = await utils.now();
+
+      {
+        const now = await utils.now();
+
+        {
+          const [balance11, balance12, balance21, balance22] =
+            await sft.balanceOfBatch(
+              [
+                holder1.address,
+                holder1.address,
+                holder2.address,
+                holder2.address,
+              ],
+              [1, 2, 1, 2]
+            );
+          expect(balance11).to.equal(2);
+          expect(balance12).to.equal(0);
+          expect(balance21).to.equal(2);
+          expect(balance22).to.equal(4);
+        }
+        expect(await sft["totalSupply()"]()).to.equal(8);
+        expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
+        expect(await sft["totalSupply(uint256)"](2)).to.equal(4);
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+        expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 2)).to.equal(0);
+      }
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
+        expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+        expect(await sft.holdingPeriod(holder2, 2)).to.equal(
+          now - holdingStartedAt22
+        );
+      }
+    });
+  });
+
   describe("burn", () => {
     it("failure: TokenUnregistered", async () => {
       await expect(sft.burn(holder1.address, 1, 1))
@@ -579,12 +781,12 @@ describe(SFT_CONTRACT_NAME, () => {
       const holdingStartedAt12 = await utils.now();
 
       {
-        const [balance1, balance2] = await sft.balanceOfBatch(
+        const [balance11, balance12] = await sft.balanceOfBatch(
           [holder1.address, holder1.address],
           [1, 2]
         );
-        expect(balance1).to.equal(4);
-        expect(balance2).to.equal(4);
+        expect(balance11).to.equal(4);
+        expect(balance12).to.equal(4);
       }
       expect(await sft["totalSupply()"]()).to.equal(8);
       expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
@@ -621,12 +823,12 @@ describe(SFT_CONTRACT_NAME, () => {
         const now = await utils.now();
 
         {
-          const [balance1, balance2] = await sft.balanceOfBatch(
+          const [balance11, balance12] = await sft.balanceOfBatch(
             [holder1.address, holder1.address],
             [1, 2]
           );
-          expect(balance1).to.equal(3);
-          expect(balance2).to.equal(2);
+          expect(balance11).to.equal(3);
+          expect(balance12).to.equal(2);
         }
         expect(await sft["totalSupply()"]()).to.equal(5);
         expect(await sft["totalSupply(uint256)"](1)).to.equal(3);
@@ -649,7 +851,7 @@ describe(SFT_CONTRACT_NAME, () => {
 
       // burnBatch: success
       await expect(
-        sft.connect(holder1).burnBatch(holder1.address, [1, 2], [2, 1])
+        sft.connect(holder1).burnBatch(holder1.address, [1, 2], [1, 2])
       )
         .to.emit(sft, "TransferBatch")
         .withArgs(
@@ -657,20 +859,20 @@ describe(SFT_CONTRACT_NAME, () => {
           holder1.address,
           ethers.ZeroAddress,
           [1, 2],
-          [2, 1]
+          [1, 2]
         );
 
       {
-        const [balance1, balance2] = await sft.balanceOfBatch(
+        const [balance11, balance12] = await sft.balanceOfBatch(
           [holder1.address, holder1.address],
           [1, 2]
         );
-        expect(balance1).to.equal(1);
-        expect(balance2).to.equal(1);
+        expect(balance11).to.equal(2);
+        expect(balance12).to.equal(0);
       }
       expect(await sft["totalSupply()"]()).to.equal(2);
-      expect(await sft["totalSupply(uint256)"](1)).to.equal(1);
-      expect(await sft["totalSupply(uint256)"](2)).to.equal(1);
+      expect(await sft["totalSupply(uint256)"](1)).to.equal(2);
+      expect(await sft["totalSupply(uint256)"](2)).to.equal(0);
       expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
       expect(await sft.holdingPeriod(holder1, 2)).to.equal(0);
 
