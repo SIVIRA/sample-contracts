@@ -190,10 +190,9 @@ describe(SFT_CONTRACT_NAME, () => {
       await sft.connect(minter).airdrop(holder1.address, 1, 2);
 
       // setSupplyCap: failure: InvalidSupplyCap
-      await expect(sft.setSupplyCap(1, 1)).to.be.revertedWithCustomError(
-        sft,
-        "InvalidSupplyCap"
-      );
+      await expect(sft.setSupplyCap(1, 1))
+        .to.be.revertedWithCustomError(sft, "InvalidSupplyCap")
+        .withArgs(1, 1);
 
       // setSupplyCap: success
       await sft.setSupplyCap(1, 3);
