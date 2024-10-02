@@ -413,6 +413,16 @@ describe(SFT_CONTRACT_NAME, () => {
       expect(await sft.holdingPeriod(holder1, 1)).to.equal(0);
       expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
 
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(
+          now - holdingStartedAt11
+        );
+        expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+      }
+
       // safeTransferFrom: success
       await expect(
         sft
@@ -422,12 +432,18 @@ describe(SFT_CONTRACT_NAME, () => {
         .to.emit(sft, "TransferSingle")
         .withArgs(holder1.address, holder1.address, holder2.address, 1, 1);
 
-      expect(await sft.balanceOf(holder1.address, 1)).to.equal(3);
-      expect(await sft.balanceOf(holder2.address, 1)).to.equal(1);
-      expect(await sft["totalSupply()"]()).to.equal(4);
-      expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
-      expect(await sft.holdingPeriod(holder1, 1)).to.equal(1);
-      expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+      {
+        const now = await utils.now();
+
+        expect(await sft.balanceOf(holder1.address, 1)).to.equal(3);
+        expect(await sft.balanceOf(holder2.address, 1)).to.equal(1);
+        expect(await sft["totalSupply()"]()).to.equal(4);
+        expect(await sft["totalSupply(uint256)"](1)).to.equal(4);
+        expect(await sft.holdingPeriod(holder1, 1)).to.equal(
+          now - holdingStartedAt11
+        );
+        expect(await sft.holdingPeriod(holder2, 1)).to.equal(0);
+      }
 
       // time passed
       {
