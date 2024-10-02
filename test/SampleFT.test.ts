@@ -7,7 +7,7 @@ import { SampleFT, SampleFT__factory } from "../typechain-types";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 
 const FT_CONTRACT_NAME = "SampleFT" as const;
-const FT_HOLDING_AMOUNT_THRESHOLD = 3 as const;
+const FT_HOLDING_AMOUNT_THRESHOLD = 1 as const;
 
 describe(FT_CONTRACT_NAME, function () {
   let runner: HardhatEthersSigner;
