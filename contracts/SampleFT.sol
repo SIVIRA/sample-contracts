@@ -5,7 +5,9 @@ import {IAirdroppableFT} from "./IAirdroppableFT.sol";
 import {BaseFT} from "./BaseFT.sol";
 
 contract SampleFT is IAirdroppableFT, BaseFT {
-    constructor() BaseFT(_msgSender(), "Sample FT", "SFT", 1) {}
+    constructor(
+        uint256 holdingAmountThreshold_
+    ) BaseFT(_msgSender(), "Sample FT", "SFT", holdingAmountThreshold_) {}
 
     function airdrop(
         address to_,
