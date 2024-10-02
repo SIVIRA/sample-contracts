@@ -1,15 +1,18 @@
-import { expect } from "chai";
+import { expect, util } from "chai";
 import { ethers } from "hardhat";
 
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { SampleFT, SampleFT__factory } from "../typechain-types";
 
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import * as utils from "./utils";
 
 const FT_CONTRACT_NAME = "SampleFT" as const;
-const FT_HOLDING_AMOUNT_THRESHOLD = 1 as const;
+const FT_HOLDING_AMOUNT_THRESHOLD = 3 as const; // must be greater than or equal to 2
 
 describe(FT_CONTRACT_NAME, function () {
+  const DUMMY_PERIOD = 60 as const;
+
   let runner: HardhatEthersSigner;
   let minter: HardhatEthersSigner;
   let holder1: HardhatEthersSigner;
@@ -28,7 +31,18 @@ describe(FT_CONTRACT_NAME, function () {
     await ft.waitForDeployment();
   });
 
-  describe("pausable", () => {
+  describe("initial state", () => {
+    it("success", async () => {
+      expect(await ft.owner()).to.equal(runner.address);
+      expect(await ft.paused()).to.be.true;
+      expect(await ft.supplyCap()).to.equal(0);
+      expect(await ft.holdingAmountThreshold()).to.be.eq(
+        FT_HOLDING_AMOUNT_THRESHOLD
+      );
+    });
+  });
+
+  describe("pause, unpause", () => {
     it("all", async () => {
       // pause: failure: EnforcedPause
       await expect(ft.pause()).to.be.revertedWithCustomError(
@@ -62,7 +76,329 @@ describe(FT_CONTRACT_NAME, function () {
     });
   });
 
-  describe("minter", () => {
+  describe("setSupplyCap, freezeSupplyCap", () => {
+    it("all", async () => {
+      // setSupplyCap: failure: OwnableUnauthorizedAccount
+      await expect(ft.connect(minter).setSupplyCap(0))
+        .to.be.revertedWithCustomError(ft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
+
+      // freezeSupplyCap: failure: OwnableUnauthorizedAccount
+      await expect(ft.connect(minter).freezeSupplyCap())
+        .to.be.revertedWithCustomError(ft, "OwnableUnauthorizedAccount")
+        .withArgs(minter.address);
+
+      // unpause: success
+      await ft.unpause();
+
+      // addMinter: success
+      await ft.addMinter(minter.address);
+
+      // setSupplyCap: success
+      await ft.setSupplyCap(4);
+
+      expect(await ft.supplyCap()).to.equal(4);
+
+      // airdrop: success
+      await ft.connect(minter).airdrop(holder1.address, 2);
+
+      // setSupplyCap: failure: InvalidSupplyCap
+      await expect(ft.setSupplyCap(1))
+        .to.be.revertedWithCustomError(ft, "InvalidSupplyCap")
+        .withArgs(1);
+
+      // setSupplyCap: success
+      await ft.setSupplyCap(3);
+
+      expect(await ft.supplyCap()).to.equal(3);
+
+      // freezeSupplyCap: success
+      await ft.freezeSupplyCap();
+
+      // setSupplyCap: failure: SupplyCapFrozen
+      await expect(ft.setSupplyCap(4)).to.be.revertedWithCustomError(
+        ft,
+        "SupplyCapFrozen"
+      );
+
+      // freezeSupplyCap: failure: SupplyCapFrozen
+      await expect(ft.freezeSupplyCap()).to.be.revertedWithCustomError(
+        ft,
+        "SupplyCapFrozen"
+      );
+    });
+  });
+
+  describe("airdrop", () => {
+    it("success", async () => {
+      // unpause: success
+      await ft.unpause();
+
+      // addMinter: success
+      await ft.addMinter(minter.address);
+
+      expect(await ft.balanceOf(holder1.address)).to.equal(0);
+      expect(await ft.totalSupply()).to.equal(0);
+      expect(await ft.holdingPeriod(holder1.address)).to.equal(0);
+
+      // airdrop: success
+      await expect(ft.connect(minter).airdrop(holder1.address, 1))
+        .to.emit(ft, "Transfer")
+        .withArgs(ethers.ZeroAddress, holder1.address, 1);
+
+      expect(await ft.balanceOf(holder1.address)).to.equal(1);
+      expect(await ft.totalSupply()).to.equal(1);
+      expect(await ft.holdingPeriod(holder1.address)).to.equal(0);
+
+      // time passed
+      {
+        await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await ft.holdingPeriod(holder1.address)).to.equal(0);
+      }
+
+      // airdrop: success
+      await expect(
+        ft
+          .connect(minter)
+          .airdrop(holder1.address, FT_HOLDING_AMOUNT_THRESHOLD - 1)
+      )
+        .to.emit(ft, "Transfer")
+        .withArgs(
+          ethers.ZeroAddress,
+          holder1.address,
+          FT_HOLDING_AMOUNT_THRESHOLD - 1
+        );
+
+      const holdingStartedAt = await utils.now();
+
+      expect(await ft.balanceOf(holder1.address)).to.equal(
+        FT_HOLDING_AMOUNT_THRESHOLD
+      );
+      expect(await ft.totalSupply()).to.equal(FT_HOLDING_AMOUNT_THRESHOLD);
+      expect(await ft.holdingPeriod(holder1.address)).to.equal(0);
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await ft.holdingPeriod(holder1.address)).to.equal(
+          now - holdingStartedAt
+        );
+      }
+    });
+  });
+
+  describe("transfer", () => {
+    it("success", async () => {
+      // unpause: success
+      await ft.unpause();
+
+      // addMinter: success
+      await ft.addMinter(minter.address);
+
+      // airdrop: success
+      await ft
+        .connect(minter)
+        .airdrop(holder1.address, FT_HOLDING_AMOUNT_THRESHOLD + 1);
+
+      let holdingStartedAt1 = await utils.now();
+
+      expect(await ft.balanceOf(holder1.address)).to.equal(
+        FT_HOLDING_AMOUNT_THRESHOLD + 1
+      );
+      expect(await ft.balanceOf(holder2.address)).to.equal(0);
+      expect(await ft.totalSupply()).to.equal(FT_HOLDING_AMOUNT_THRESHOLD + 1);
+      expect(await ft.holdingPeriod(holder1.address)).to.equal(0);
+      expect(await ft.holdingPeriod(holder2.address)).to.equal(0);
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await ft.holdingPeriod(holder1.address)).to.equal(
+          now - holdingStartedAt1
+        );
+      }
+
+      // transfer: success
+      await expect(ft.connect(holder1).transfer(holder2.address, 1))
+        .to.emit(ft, "Transfer")
+        .withArgs(holder1.address, holder2.address, 1);
+
+      {
+        const now = await utils.now();
+
+        expect(await ft.balanceOf(holder1.address)).to.equal(
+          FT_HOLDING_AMOUNT_THRESHOLD
+        );
+        expect(await ft.balanceOf(holder2.address)).to.equal(1);
+        expect(await ft.totalSupply()).to.equal(
+          FT_HOLDING_AMOUNT_THRESHOLD + 1
+        );
+        expect(await ft.holdingPeriod(holder1.address)).to.equal(
+          now - holdingStartedAt1
+        );
+        expect(await ft.holdingPeriod(holder2.address)).to.equal(0);
+      }
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await ft.holdingPeriod(holder1.address)).to.equal(
+          now - holdingStartedAt1
+        );
+        expect(await ft.holdingPeriod(holder2.address)).to.equal(0);
+      }
+
+      // transfer: success
+      await expect(
+        ft
+          .connect(holder1)
+          .transfer(holder2.address, FT_HOLDING_AMOUNT_THRESHOLD - 1)
+      )
+        .to.emit(ft, "Transfer")
+        .withArgs(
+          holder1.address,
+          holder2.address,
+          FT_HOLDING_AMOUNT_THRESHOLD - 1
+        );
+
+      const holdingStartedAt2 = await utils.now();
+
+      expect(await ft.balanceOf(holder1.address)).to.equal(1);
+      expect(await ft.balanceOf(holder2.address)).to.equal(
+        FT_HOLDING_AMOUNT_THRESHOLD
+      );
+      expect(await ft.totalSupply()).to.equal(FT_HOLDING_AMOUNT_THRESHOLD + 1);
+      expect(await ft.holdingPeriod(holder1.address)).to.equal(0);
+      expect(await ft.holdingPeriod(holder2.address)).to.equal(0);
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await ft.holdingPeriod(holder1.address)).to.equal(0);
+        expect(await ft.holdingPeriod(holder2.address)).to.equal(
+          now - holdingStartedAt2
+        );
+      }
+
+      // transfer: success
+      await expect(
+        ft
+          .connect(holder2)
+          .transfer(holder1.address, FT_HOLDING_AMOUNT_THRESHOLD)
+      )
+        .to.emit(ft, "Transfer")
+        .withArgs(
+          holder2.address,
+          holder1.address,
+          FT_HOLDING_AMOUNT_THRESHOLD
+        );
+
+      holdingStartedAt1 = await utils.now();
+
+      expect(await ft.balanceOf(holder1.address)).to.equal(
+        FT_HOLDING_AMOUNT_THRESHOLD + 1
+      );
+      expect(await ft.balanceOf(holder2.address)).to.equal(0);
+      expect(await ft.totalSupply()).to.equal(FT_HOLDING_AMOUNT_THRESHOLD + 1);
+      expect(await ft.holdingPeriod(holder1.address)).to.equal(0);
+      expect(await ft.holdingPeriod(holder2.address)).to.equal(0);
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await ft.holdingPeriod(holder1.address)).to.equal(
+          now - holdingStartedAt1
+        );
+        expect(await ft.holdingPeriod(holder2.address)).to.equal(0);
+      }
+    });
+  });
+
+  describe("burn", () => {
+    it("success", async () => {
+      // unpause: success
+      await ft.unpause();
+
+      // addMinter: success
+      await ft.addMinter(minter.address);
+
+      // airdrop: success
+      await ft
+        .connect(minter)
+        .airdrop(holder1.address, FT_HOLDING_AMOUNT_THRESHOLD + 1);
+
+      const holdingStartedAt = await utils.now();
+
+      expect(await ft.balanceOf(holder1.address)).to.equal(
+        FT_HOLDING_AMOUNT_THRESHOLD + 1
+      );
+      expect(await ft.totalSupply()).to.equal(FT_HOLDING_AMOUNT_THRESHOLD + 1);
+      expect(await ft.holdingPeriod(holder1.address)).to.equal(0);
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await ft.holdingPeriod(holder1.address)).to.equal(
+          now - holdingStartedAt
+        );
+      }
+
+      // burn: success
+      await expect(ft.connect(holder1).burn(1))
+        .to.emit(ft, "Transfer")
+        .withArgs(holder1.address, ethers.ZeroAddress, 1);
+
+      {
+        const now = await utils.now();
+
+        expect(await ft.balanceOf(holder1.address)).to.equal(
+          FT_HOLDING_AMOUNT_THRESHOLD
+        );
+        expect(await ft.totalSupply()).to.equal(FT_HOLDING_AMOUNT_THRESHOLD);
+        expect(await ft.holdingPeriod(holder1.address)).to.equal(
+          now - holdingStartedAt
+        );
+      }
+
+      // time passed
+      {
+        const now = await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await ft.holdingPeriod(holder1.address)).to.equal(
+          now - holdingStartedAt
+        );
+      }
+
+      // burn: success
+      await expect(ft.connect(holder1).burn(FT_HOLDING_AMOUNT_THRESHOLD - 1))
+        .to.emit(ft, "Transfer")
+        .withArgs(
+          holder1.address,
+          ethers.ZeroAddress,
+          FT_HOLDING_AMOUNT_THRESHOLD - 1
+        );
+
+      expect(await ft.balanceOf(holder1.address)).to.equal(1);
+      expect(await ft.totalSupply()).to.equal(1);
+      expect(await ft.holdingPeriod(holder1.address)).to.equal(0);
+
+      // time passed
+      {
+        await helpers.time.increase(DUMMY_PERIOD);
+
+        expect(await ft.holdingPeriod(holder1.address)).to.equal(0);
+      }
+    });
+  });
+
+  describe("addMinter, removeMinter, freezeMinters", () => {
     it("all", async () => {
       expect(await ft.isMinter(minter.address)).to.be.false;
 
@@ -129,115 +465,6 @@ describe(FT_CONTRACT_NAME, function () {
         ft,
         "MintersFrozen"
       );
-    });
-
-    it("failure: InvalidMinter", async () => {
-      await ft.unpause();
-      await ft.addMinter(minter.address);
-
-      await expect(ft.connect(holder1).airdrop(holder2.address, 10))
-        .to.be.revertedWithCustomError(ft, "InvalidMinter")
-        .withArgs(holder1.address);
-    });
-  });
-
-  describe("cap", () => {
-    it("success", async () => {
-      await ft.unpause();
-
-      expect(await ft.supplyCap()).to.be.eq(0);
-      await ft.setSupplyCap(1000);
-      expect(await ft.supplyCap()).to.be.eq(1000);
-      await ft.setSupplyCap(0);
-      expect(await ft.supplyCap()).to.be.eq(0);
-    });
-
-    it("freezable", async () => {
-      await ft.unpause();
-
-      expect(await ft.supplyCap()).to.be.eq(0);
-      await ft.setSupplyCap(1000);
-      expect(await ft.supplyCap()).to.be.eq(1000);
-      await ft.freezeSupplyCap();
-      await expect(ft.setSupplyCap(2000)).to.be.revertedWithCustomError(
-        ft,
-        "SupplyCapFrozen"
-      );
-    });
-
-    it("over cap mint", async () => {
-      await ft.unpause();
-      await ft.addMinter(minter.address);
-
-      await ft.setSupplyCap(100);
-      expect(await ft.supplyCap()).to.be.eq(100);
-
-      await expect(
-        ft.connect(minter).airdrop(holder1.address, 1000)
-      ).to.be.revertedWithCustomError(ft, "SupplyCapExceeded");
-    });
-
-    it("failure: OwnableUnauthorizedAccount", async () => {
-      await expect(ft.connect(minter).setSupplyCap(100))
-        .to.be.revertedWithCustomError(ft, "OwnableUnauthorizedAccount")
-        .withArgs(minter.address);
-
-      await expect(ft.connect(minter).freezeSupplyCap())
-        .to.be.revertedWithCustomError(ft, "OwnableUnauthorizedAccount")
-        .withArgs(minter.address);
-    });
-
-    it("failure: InvalidSupplyCap", async () => {
-      await ft.unpause();
-      await ft.addMinter(minter.address);
-
-      await ft.setSupplyCap(100);
-      expect(await ft.supplyCap()).to.be.eq(100);
-      await ft.connect(minter).airdrop(holder1.address, 100);
-      expect(await ft.totalSupply()).to.be.eq(100);
-
-      await expect(ft.setSupplyCap(1))
-        .to.be.revertedWithCustomError(ft, "InvalidSupplyCap")
-        .withArgs(1);
-    });
-  });
-
-  describe("holding", () => {
-    it("airdrop and over threshold", async () => {
-      await ft.unpause();
-      await ft.addMinter(minter.address);
-
-      expect(await ft.balanceOf(holder1.address)).to.be.eq(0);
-      expect(await ft.holdingPeriod(holder1)).to.be.eq(0);
-
-      await ft.connect(minter).airdrop(holder1.address, 100);
-      expect(await ft.balanceOf(holder1.address)).to.be.eq(100);
-      await helpers.time.increase(1000);
-      expect(await ft.holdingPeriod(holder1)).to.be.eq(1000);
-    });
-
-    it("transfer tokens and under threshold", async () => {
-      await ft.unpause();
-      await ft.addMinter(minter.address);
-
-      await ft.connect(minter).airdrop(holder1.address, 1);
-      expect(await ft.balanceOf(holder1.address)).to.be.eq(1);
-      await helpers.time.increase(1000);
-      expect(await ft.holdingPeriod(holder1)).to.be.eq(1000);
-
-      await ft.connect(holder1).burn(1);
-      expect(await ft.balanceOf(holder1.address)).to.be.eq(0);
-      expect(await ft.holdingPeriod(holder1)).to.be.eq(0);
-      await helpers.time.increase(1000);
-      expect(await ft.holdingPeriod(holder1)).to.be.eq(0);
-
-      await ft.connect(minter).airdrop(holder1.address, 1);
-      await ft.connect(holder1).transfer(holder2.address, 1);
-      expect(await ft.balanceOf(holder1.address)).to.be.eq(0);
-      expect(await ft.balanceOf(holder2.address)).to.be.eq(1);
-      await helpers.time.increase(1000);
-      expect(await ft.holdingPeriod(holder1)).to.be.eq(0);
-      expect(await ft.holdingPeriod(holder2)).to.be.eq(1000);
     });
   });
 });
