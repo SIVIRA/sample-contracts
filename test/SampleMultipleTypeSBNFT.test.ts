@@ -11,7 +11,7 @@ import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
 const SBNFT_CONTRACT_NAME = "SampleMultipleTypeSBNFT" as const;
-const SBNFT_MAX_TOKEN_TYPE = 3 as const;
+const SBNFT_MAX_TOKEN_TYPE = 3 as const; // must be greater than or equal to 2
 
 describe(SBNFT_CONTRACT_NAME, () => {
   const DUMMY_PERIOD = 60 as const;

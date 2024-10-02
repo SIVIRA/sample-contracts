@@ -11,7 +11,7 @@ import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
 const NFT_CONTRACT_NAME = "SampleMultipleTypeNFT" as const;
-const NFT_MAX_TOKEN_TYPE = 3 as const;
+const NFT_MAX_TOKEN_TYPE = 3 as const; // must be greater than or equal to 2
 
 describe(NFT_CONTRACT_NAME, () => {
   const DUMMY_PERIOD = 60 as const;
