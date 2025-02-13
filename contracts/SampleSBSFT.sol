@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import {IAirdroppableSFT} from "./IAirdroppableSFT.sol";
 import {BaseSBSFT} from "./BaseSBSFT.sol";
 
-contract SampleSBSFT is BaseSBSFT, IAirdroppableSFT {
+contract SampleSBSFT is IAirdroppableSFT, BaseSBSFT {
     constructor() BaseSBSFT(_msgSender(), "") {}
 
     function airdrop(
