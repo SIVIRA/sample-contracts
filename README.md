@@ -6,7 +6,6 @@
 
 ```
 pnpm install
-pnpm prepare
 ```
 
 ## Test
