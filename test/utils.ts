@@ -1,8 +1,7 @@
-import { ethers } from "hardhat";
-
 import { Block } from "ethers";
+import {HardhatEthers} from "@nomicfoundation/hardhat-ethers/types";
 
-export async function now(): Promise<number> {
+export async function now(ethers: HardhatEthers): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     ethers.provider
       .getBlockNumber()
