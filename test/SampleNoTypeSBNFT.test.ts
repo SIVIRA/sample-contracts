@@ -1,13 +1,15 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
 
+import { network } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthers } from "@nomicfoundation/hardhat-ethers/types";
+import {NetworkHelpers} from "@nomicfoundation/hardhat-network-helpers/types";
+
 import {
   SampleNoTypeSBNFT,
   SampleNoTypeSBNFT__factory,
 } from "../typechain-types";
 
-import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
 const SBNFT_CONTRACT_NAME = "SampleNoTypeSBNFT" as const;
@@ -19,11 +21,16 @@ describe(SBNFT_CONTRACT_NAME, () => {
   let minter: HardhatEthersSigner;
   let holder1: HardhatEthersSigner;
   let holder2: HardhatEthersSigner;
+  let ethers: HardhatEthers;
+  let helpers: NetworkHelpers;
 
   let sbnftFactory: SampleNoTypeSBNFT__factory;
   let sbnft: SampleNoTypeSBNFT;
 
   before(async () => {
+    let { ethers: eth, networkHelpers } = await network.connect();
+    ethers = eth;
+    helpers = networkHelpers;
     [runner, minter, holder1, holder2] = await ethers.getSigners();
   });
 
@@ -242,7 +249,7 @@ describe(SBNFT_CONTRACT_NAME, () => {
         .to.emit(sbnft, "MetadataUpdate")
         .withArgs(0);
 
-      const holdingStartedAt = await utils.now();
+      const holdingStartedAt = await utils.now(ethers);
 
       expect(await sbnft.balanceOf(holder1.address)).to.equal(1);
       expect(await sbnft.ownerOf(0)).to.equal(holder1.address);
@@ -447,7 +454,7 @@ describe(SBNFT_CONTRACT_NAME, () => {
       // airdropWithTokenURI: success
       await sbnft.connect(minter).airdropWithTokenURI(holder1.address, "");
 
-      const holdingStartedAt = await utils.now();
+      const holdingStartedAt = await utils.now(ethers);
 
       // setTokenURI: success
       await sbnft.setTokenURI(0, TOKEN_URI);

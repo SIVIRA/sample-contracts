@@ -1,22 +1,35 @@
-import { HardhatUserConfig } from "hardhat/config";
-import { NetworksUserConfig } from "hardhat/types";
+import type { HardhatUserConfig } from "hardhat/config";
+import type { NetworksUserConfig } from "hardhat/types";
 
-import "@nomicfoundation/hardhat-toolbox";
-import "@nomicfoundation/hardhat-verify";
+import hardhatToolboxMochaEthers from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
+import hardhatNetworkHelpers from "@nomicfoundation/hardhat-network-helpers";
 
-const networks: NetworksUserConfig = {};
+const networks: NetworksUserConfig = {
+  hardhatMainnet: {
+    type: "edr-simulated",
+    chainType: "l1",
+  },
+};
 if (
   process.env.NETWORK !== undefined &&
   process.env.RPC_URL !== undefined &&
-  process.env.PRIVATE_KEY !== undefined
+  process.env.PRIVATE_KEY !== undefined &&
+  process.env.TYPE !== undefined &&
+  process.env.CHAIN_TYPE !== undefined
 ) {
   networks[process.env.NETWORK] = {
+    type: process.env.TYPE,
+    chainType: process.env.CHAIN_TYPE,
     url: process.env.RPC_URL,
     accounts: [process.env.PRIVATE_KEY],
   };
 }
 
 const config: HardhatUserConfig = {
+  plugins: [
+    hardhatToolboxMochaEthers,
+    hardhatNetworkHelpers,
+  ],
   solidity: {
     version: "0.8.28",
     settings: {
