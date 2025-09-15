@@ -1,10 +1,15 @@
-import { expect, util } from "chai";
-import { ethers } from "hardhat";
+import { expect } from "chai";
 
+import { network } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { SampleFT, SampleFT__factory } from "../typechain-types";
+import { HardhatEthers } from "@nomicfoundation/hardhat-ethers/types";
+import {NetworkHelpers} from "@nomicfoundation/hardhat-network-helpers/types";
 
-import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import {
+  SampleFT,
+  SampleFT__factory,
+} from "../typechain-types";
+
 import * as utils from "./utils";
 
 const FT_CONTRACT_NAME = "SampleFT" as const;
@@ -17,11 +22,16 @@ describe(FT_CONTRACT_NAME, function () {
   let minter: HardhatEthersSigner;
   let holder1: HardhatEthersSigner;
   let holder2: HardhatEthersSigner;
+  let ethers: HardhatEthers;
+  let helpers: NetworkHelpers;
 
   let ftFactory: SampleFT__factory;
   let ft: SampleFT;
 
   before(async () => {
+    let { ethers: eth, networkHelpers } = await network.connect();
+    ethers = eth;
+    helpers = networkHelpers;
     [runner, minter, holder1, holder2] = await ethers.getSigners();
   });
 
@@ -170,7 +180,7 @@ describe(FT_CONTRACT_NAME, function () {
           FT_HOLDING_AMOUNT_THRESHOLD - 1
         );
 
-      const holdingStartedAt = await utils.now();
+      const holdingStartedAt = await utils.now(ethers);
 
       expect(await ft.balanceOf(holder1.address)).to.equal(
         FT_HOLDING_AMOUNT_THRESHOLD
@@ -202,7 +212,7 @@ describe(FT_CONTRACT_NAME, function () {
         .connect(minter)
         .airdrop(holder1.address, FT_HOLDING_AMOUNT_THRESHOLD + 1);
 
-      let holdingStartedAt1 = await utils.now();
+      let holdingStartedAt1 = await utils.now(ethers);
 
       expect(await ft.balanceOf(holder1.address)).to.equal(
         FT_HOLDING_AMOUNT_THRESHOLD + 1
@@ -227,7 +237,7 @@ describe(FT_CONTRACT_NAME, function () {
         .withArgs(holder1.address, holder2.address, 1);
 
       {
-        const now = await utils.now();
+        const now = await utils.now(ethers);
 
         expect(await ft.balanceOf(holder1.address)).to.equal(
           FT_HOLDING_AMOUNT_THRESHOLD
@@ -265,7 +275,7 @@ describe(FT_CONTRACT_NAME, function () {
           FT_HOLDING_AMOUNT_THRESHOLD - 1
         );
 
-      const holdingStartedAt2 = await utils.now();
+      const holdingStartedAt2 = await utils.now(ethers);
 
       expect(await ft.balanceOf(holder1.address)).to.equal(1);
       expect(await ft.balanceOf(holder2.address)).to.equal(
@@ -298,7 +308,7 @@ describe(FT_CONTRACT_NAME, function () {
           FT_HOLDING_AMOUNT_THRESHOLD
         );
 
-      holdingStartedAt1 = await utils.now();
+      holdingStartedAt1 = await utils.now(ethers);
 
       expect(await ft.balanceOf(holder1.address)).to.equal(
         FT_HOLDING_AMOUNT_THRESHOLD + 1
@@ -333,7 +343,7 @@ describe(FT_CONTRACT_NAME, function () {
         .connect(minter)
         .airdrop(holder1.address, FT_HOLDING_AMOUNT_THRESHOLD + 1);
 
-      const holdingStartedAt = await utils.now();
+      const holdingStartedAt = await utils.now(ethers);
 
       expect(await ft.balanceOf(holder1.address)).to.equal(
         FT_HOLDING_AMOUNT_THRESHOLD + 1
@@ -356,7 +366,7 @@ describe(FT_CONTRACT_NAME, function () {
         .withArgs(holder1.address, ethers.ZeroAddress, 1);
 
       {
-        const now = await utils.now();
+        const now = await utils.now(ethers);
 
         expect(await ft.balanceOf(holder1.address)).to.equal(
           FT_HOLDING_AMOUNT_THRESHOLD

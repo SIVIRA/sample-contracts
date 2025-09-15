@@ -1,10 +1,15 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
 
+import { network } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { SampleSBSFT, SampleSBSFT__factory } from "../typechain-types";
+import { HardhatEthers } from "@nomicfoundation/hardhat-ethers/types";
+import {NetworkHelpers} from "@nomicfoundation/hardhat-network-helpers/types";
 
-import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import {
+  SampleSBSFT,
+  SampleSBSFT__factory,
+} from "../typechain-types";
+
 import * as utils from "./utils";
 
 const SBSFT_CONTRACT_NAME = "SampleSBSFT" as const;
@@ -16,11 +21,16 @@ describe(SBSFT_CONTRACT_NAME, function () {
   let minter: HardhatEthersSigner;
   let holder1: HardhatEthersSigner;
   let holder2: HardhatEthersSigner;
+  let ethers: HardhatEthers;
+  let helpers: NetworkHelpers;
 
   let sbsftFactory: SampleSBSFT__factory;
   let sbsft: SampleSBSFT;
 
   before(async () => {
+    let { ethers: eth, networkHelpers } = await network.connect();
+    ethers = eth;
+    helpers = networkHelpers;
     [runner, minter, holder1, holder2] = await ethers.getSigners();
   });
 
@@ -353,7 +363,7 @@ describe(SBSFT_CONTRACT_NAME, function () {
         .to.emit(sbsft, "TransferSingle")
         .withArgs(minter.address, ethers.ZeroAddress, holder1.address, 1, 2);
 
-      const holdingStartedAt = await utils.now();
+      const holdingStartedAt = await utils.now(ethers);
 
       expect(await sbsft.balanceOf(holder1.address, 1)).to.equal(3);
       expect(await sbsft["totalSupply()"]()).to.equal(3);
@@ -467,7 +477,7 @@ describe(SBSFT_CONTRACT_NAME, function () {
       // airdrop: success
       await sbsft.connect(minter).airdrop(holder1.address, 1, 4);
 
-      const holdingStartedAt = await utils.now();
+      const holdingStartedAt = await utils.now(ethers);
 
       expect(await sbsft.balanceOf(holder1.address, 1)).to.equal(4);
       expect(await sbsft["totalSupply()"]()).to.equal(4);
@@ -489,7 +499,7 @@ describe(SBSFT_CONTRACT_NAME, function () {
         .withArgs(holder1.address, holder1.address, ethers.ZeroAddress, 1, 1);
 
       {
-        const now = await utils.now();
+        const now = await utils.now(ethers);
 
         expect(await sbsft.balanceOf(holder1.address, 1)).to.equal(3);
         expect(await sbsft["totalSupply()"]()).to.equal(3);
@@ -548,12 +558,12 @@ describe(SBSFT_CONTRACT_NAME, function () {
       // airdrop: success
       await sbsft.connect(minter).airdrop(holder1.address, 1, 4);
 
-      const holdingStartedAt11 = await utils.now();
+      const holdingStartedAt11 = await utils.now(ethers);
 
       // airdrop: success
       await sbsft.connect(minter).airdrop(holder1.address, 2, 4);
 
-      const holdingStartedAt12 = await utils.now();
+      const holdingStartedAt12 = await utils.now(ethers);
 
       {
         const [balance11, balance12] = await sbsft.balanceOfBatch(
@@ -595,7 +605,7 @@ describe(SBSFT_CONTRACT_NAME, function () {
         );
 
       {
-        const now = await utils.now();
+        const now = await utils.now(ethers);
 
         {
           const [balance11, balance12] = await sbsft.balanceOfBatch(

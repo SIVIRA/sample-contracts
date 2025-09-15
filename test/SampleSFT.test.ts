@@ -1,10 +1,15 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
 
+import { network } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { SampleSFT, SampleSFT__factory } from "../typechain-types";
+import { HardhatEthers } from "@nomicfoundation/hardhat-ethers/types";
+import {NetworkHelpers} from "@nomicfoundation/hardhat-network-helpers/types";
 
-import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import {
+  SampleSFT,
+  SampleSFT__factory,
+} from "../typechain-types";
+
 import * as utils from "./utils";
 
 const SFT_CONTRACT_NAME = "SampleSFT" as const;
@@ -16,11 +21,16 @@ describe(SFT_CONTRACT_NAME, () => {
   let minter: HardhatEthersSigner;
   let holder1: HardhatEthersSigner;
   let holder2: HardhatEthersSigner;
+  let ethers: HardhatEthers;
+  let helpers: NetworkHelpers;
 
   let sftFactory: SampleSFT__factory;
   let sft: SampleSFT;
 
   before(async () => {
+    let { ethers: eth, networkHelpers } = await network.connect();
+    ethers = eth;
+    helpers = networkHelpers;
     [runner, minter, holder1, holder2] = await ethers.getSigners();
   });
 
@@ -364,7 +374,7 @@ describe(SFT_CONTRACT_NAME, () => {
         .to.emit(sft, "TransferSingle")
         .withArgs(minter.address, ethers.ZeroAddress, holder1.address, 1, 2);
 
-      const holdingStartedAt = await utils.now();
+      const holdingStartedAt = await utils.now(ethers);
 
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(3);
       expect(await sft["totalSupply()"]()).to.equal(3);
@@ -404,7 +414,7 @@ describe(SFT_CONTRACT_NAME, () => {
       // airdrop: success
       await sft.connect(minter).airdrop(holder1.address, 1, 4);
 
-      let holdingStartedAt11 = await utils.now();
+      let holdingStartedAt11 = await utils.now(ethers);
 
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(4);
       expect(await sft.balanceOf(holder2.address, 1)).to.equal(0);
@@ -433,7 +443,7 @@ describe(SFT_CONTRACT_NAME, () => {
         .withArgs(holder1.address, holder1.address, holder2.address, 1, 1);
 
       {
-        const now = await utils.now();
+        const now = await utils.now(ethers);
 
         expect(await sft.balanceOf(holder1.address, 1)).to.equal(3);
         expect(await sft.balanceOf(holder2.address, 1)).to.equal(1);
@@ -464,7 +474,7 @@ describe(SFT_CONTRACT_NAME, () => {
         .to.emit(sft, "TransferSingle")
         .withArgs(holder1.address, holder1.address, holder2.address, 1, 2);
 
-      const holdingStartedAt21 = await utils.now();
+      const holdingStartedAt21 = await utils.now(ethers);
 
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(1);
       expect(await sft.balanceOf(holder2.address, 1)).to.equal(3);
@@ -492,7 +502,7 @@ describe(SFT_CONTRACT_NAME, () => {
         .to.emit(sft, "TransferSingle")
         .withArgs(holder2.address, holder2.address, holder1.address, 1, 3);
 
-      holdingStartedAt11 = await utils.now();
+      holdingStartedAt11 = await utils.now(ethers);
 
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(4);
       expect(await sft.balanceOf(holder2.address, 1)).to.equal(0);
@@ -542,12 +552,12 @@ describe(SFT_CONTRACT_NAME, () => {
       // airdrop: success
       await sft.connect(minter).airdrop(holder1.address, 1, 4);
 
-      let holdingStartedAt11 = await utils.now();
+      let holdingStartedAt11 = await utils.now(ethers);
 
       // airdrop: success
       await sft.connect(minter).airdrop(holder1.address, 2, 4);
 
-      const holdingStartedAt12 = await utils.now();
+      const holdingStartedAt12 = await utils.now(ethers);
 
       {
         const [balance11, balance12, balance21, balance22] =
@@ -609,7 +619,7 @@ describe(SFT_CONTRACT_NAME, () => {
         );
 
       {
-        const now = await utils.now();
+        const now = await utils.now(ethers);
 
         {
           const [balance11, balance12, balance21, balance22] =
@@ -671,7 +681,7 @@ describe(SFT_CONTRACT_NAME, () => {
           [1, 2]
         );
 
-      const holdingStartedAt22 = await utils.now();
+      const holdingStartedAt22 = await utils.now(ethers);
 
       {
         {
@@ -732,10 +742,10 @@ describe(SFT_CONTRACT_NAME, () => {
           [2, 1]
         );
 
-      holdingStartedAt11 = await utils.now();
+      holdingStartedAt11 = await utils.now(ethers);
 
       {
-        const now = await utils.now();
+        const now = await utils.now(ethers);
 
         {
           const [balance11, balance12, balance21, balance22] =
@@ -800,7 +810,7 @@ describe(SFT_CONTRACT_NAME, () => {
       // airdrop: success
       await sft.connect(minter).airdrop(holder1.address, 1, 4);
 
-      const holdingStartedAt = await utils.now();
+      const holdingStartedAt = await utils.now(ethers);
 
       expect(await sft.balanceOf(holder1.address, 1)).to.equal(4);
       expect(await sft["totalSupply()"]()).to.equal(4);
@@ -822,7 +832,7 @@ describe(SFT_CONTRACT_NAME, () => {
         .withArgs(holder1.address, holder1.address, ethers.ZeroAddress, 1, 1);
 
       {
-        const now = await utils.now();
+        const now = await utils.now(ethers);
 
         expect(await sft.balanceOf(holder1.address, 1)).to.equal(3);
         expect(await sft["totalSupply()"]()).to.equal(3);
@@ -881,12 +891,12 @@ describe(SFT_CONTRACT_NAME, () => {
       // airdrop: success
       await sft.connect(minter).airdrop(holder1.address, 1, 4);
 
-      const holdingStartedAt11 = await utils.now();
+      const holdingStartedAt11 = await utils.now(ethers);
 
       // airdrop: success
       await sft.connect(minter).airdrop(holder1.address, 2, 4);
 
-      const holdingStartedAt12 = await utils.now();
+      const holdingStartedAt12 = await utils.now(ethers);
 
       {
         const [balance11, balance12] = await sft.balanceOfBatch(
@@ -928,7 +938,7 @@ describe(SFT_CONTRACT_NAME, () => {
         );
 
       {
-        const now = await utils.now();
+        const now = await utils.now(ethers);
 
         {
           const [balance11, balance12] = await sft.balanceOfBatch(
@@ -997,7 +1007,6 @@ describe(SFT_CONTRACT_NAME, () => {
   describe("setDefaultRoyalty, freezeRoyalty", () => {
     const feeNumerator = BigInt(300);
     const feeDenominator = BigInt(10000);
-    const salePrice = ethers.parseEther("1");
 
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(
@@ -1015,7 +1024,7 @@ describe(SFT_CONTRACT_NAME, () => {
       // setDefaultRoyalty: success
       await sft.setDefaultRoyalty(minter.address, feeNumerator);
 
-      await expect(sft.royaltyInfo(0, salePrice))
+      await expect(sft.royaltyInfo(0, ethers.parseEther("1")))
         .to.be.revertedWithCustomError(sft, "TokenUnregistered")
         .withArgs(0);
 
@@ -1032,9 +1041,9 @@ describe(SFT_CONTRACT_NAME, () => {
       await sft.connect(minter).airdrop(holder1.address, 1, 1);
 
       {
-        const [receiver, amount] = await sft.royaltyInfo(1, salePrice);
+        const [receiver, amount] = await sft.royaltyInfo(1, ethers.parseEther("1"));
         expect(receiver).to.equal(minter.address);
-        expect(amount).to.equal((salePrice * feeNumerator) / feeDenominator);
+        expect(amount).to.equal((ethers.parseEther("1") * feeNumerator) / feeDenominator);
       }
 
       // freezeRoyalty: success

@@ -1,13 +1,15 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
 
+import { network } from "hardhat";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import { HardhatEthers } from "@nomicfoundation/hardhat-ethers/types";
+import {NetworkHelpers} from "@nomicfoundation/hardhat-network-helpers/types";
+
 import {
   SampleSingleTypeNFT,
   SampleSingleTypeNFT__factory,
 } from "../typechain-types";
 
-import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import * as utils from "./utils";
 
 const NFT_CONTRACT_NAME = "SampleSingleTypeNFT" as const;
@@ -19,11 +21,16 @@ describe(NFT_CONTRACT_NAME, () => {
   let minter: HardhatEthersSigner;
   let holder1: HardhatEthersSigner;
   let holder2: HardhatEthersSigner;
+  let ethers: HardhatEthers;
+  let helpers: NetworkHelpers;
 
   let nftFactory: SampleSingleTypeNFT__factory;
   let nft: SampleSingleTypeNFT;
 
   before(async () => {
+    let { ethers: eth, networkHelpers } = await network.connect();
+    ethers = eth;
+    helpers = networkHelpers;
     [runner, minter, holder1, holder2] = await ethers.getSigners();
   });
 
@@ -288,7 +295,7 @@ describe(NFT_CONTRACT_NAME, () => {
         .to.emit(nft, "MetadataUpdate")
         .withArgs(0);
 
-      const holdingStartedAt = await utils.now();
+      const holdingStartedAt = await utils.now(ethers);
 
       expect(await nft.balanceOf(holder1.address)).to.equal(1);
       expect(await nft.ownerOf(0)).to.equal(holder1.address);
@@ -435,7 +442,7 @@ describe(NFT_CONTRACT_NAME, () => {
       // airdrop: success
       await nft.connect(minter).airdrop(holder1.address);
 
-      const holdingStartedAt = await utils.now();
+      const holdingStartedAt = await utils.now(ethers);
       const userExpiredAt = holdingStartedAt + DUMMY_PERIOD * 2;
 
       // setTokenURI: success
@@ -529,7 +536,7 @@ describe(NFT_CONTRACT_NAME, () => {
       // airdrop: success
       await nft.connect(minter).airdrop(holder1.address);
 
-      const holdingStartedAt = await utils.now();
+      const holdingStartedAt = await utils.now(ethers);
       const userExpiredAt = holdingStartedAt + DUMMY_PERIOD * 2;
 
       // setTokenURI: success
@@ -579,7 +586,7 @@ describe(NFT_CONTRACT_NAME, () => {
         .withArgs(holder1.address, holder1.address, 0);
 
       {
-        const now = await utils.now();
+        const now = await utils.now(ethers);
 
         expect(await nft.balanceOf(holder1.address)).to.equal(1);
         expect(await nft.ownerOf(0)).to.equal(holder1.address);
@@ -641,7 +648,7 @@ describe(NFT_CONTRACT_NAME, () => {
       // airdrop: success
       await nft.connect(minter).airdrop(holder1.address);
 
-      const holdingStartedAt = await utils.now();
+      const holdingStartedAt = await utils.now(ethers);
       const userExpiredAt = holdingStartedAt + DUMMY_PERIOD * 2;
 
       // setTokenURI: success
@@ -724,7 +731,6 @@ describe(NFT_CONTRACT_NAME, () => {
   describe("setDefaultRoyalty, freezeRoyalty", () => {
     const feeNumerator = BigInt(300);
     const feeDenominator = BigInt(10000);
-    const salePrice = ethers.parseEther("1");
 
     it("failure: OwnableUnauthorizedAccount", async () => {
       await expect(
@@ -742,7 +748,7 @@ describe(NFT_CONTRACT_NAME, () => {
       // setDefaultRoyalty: success
       await nft.setDefaultRoyalty(minter.address, feeNumerator);
 
-      await expect(nft.royaltyInfo(0, salePrice))
+      await expect(nft.royaltyInfo(0, ethers.parseEther("1")))
         .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
         .withArgs(0);
 
@@ -756,9 +762,9 @@ describe(NFT_CONTRACT_NAME, () => {
       await nft.connect(minter).airdrop(holder1.address);
 
       {
-        const [receiver, amount] = await nft.royaltyInfo(0, salePrice);
+        const [receiver, amount] = await nft.royaltyInfo(0, ethers.parseEther("1"));
         expect(receiver).to.equal(minter.address);
-        expect(amount).to.equal((salePrice * feeNumerator) / feeDenominator);
+        expect(amount).to.equal((ethers.parseEther("1") * feeNumerator) / feeDenominator);
       }
 
       // freezeRoyalty: success
@@ -780,7 +786,7 @@ describe(NFT_CONTRACT_NAME, () => {
   describe("setUser", () => {
     it("failure: ERC721NonexistentToken", async () => {
       await expect(
-        nft.setUser(0, holder2.address, (await utils.now()) + DUMMY_PERIOD)
+        nft.setUser(0, holder2.address, (await utils.now(ethers)) + DUMMY_PERIOD)
       )
         .to.be.revertedWithCustomError(nft, "ERC721NonexistentToken")
         .withArgs(0);
@@ -798,7 +804,7 @@ describe(NFT_CONTRACT_NAME, () => {
 
       // setUser: failure: ERC721InsufficientApproval
       await expect(
-        nft.setUser(0, holder2.address, (await utils.now()) + DUMMY_PERIOD)
+        nft.setUser(0, holder2.address, (await utils.now(ethers)) + DUMMY_PERIOD)
       )
         .to.be.revertedWithCustomError(nft, "ERC721InsufficientApproval")
         .withArgs(runner.address, 0);
@@ -824,7 +830,7 @@ describe(NFT_CONTRACT_NAME, () => {
       expect(await nft.userOf(0)).to.equal(ethers.ZeroAddress);
       expect(await nft.userExpires(0)).to.equal(0);
 
-      const userExpiredAt = (await utils.now()) + DUMMY_PERIOD;
+      const userExpiredAt = (await utils.now(ethers)) + DUMMY_PERIOD;
 
       // setUser: success: by owner
       await expect(
@@ -866,7 +872,7 @@ describe(NFT_CONTRACT_NAME, () => {
       expect(await nft.userOf(0)).to.equal(ethers.ZeroAddress);
       expect(await nft.userExpires(0)).to.equal(0);
 
-      const userExpiredAt = (await utils.now()) + DUMMY_PERIOD;
+      const userExpiredAt = (await utils.now(ethers)) + DUMMY_PERIOD;
 
       // setUser: success: by approved account
       await expect(
