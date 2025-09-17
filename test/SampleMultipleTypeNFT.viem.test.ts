@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import hre from "hardhat";
-import { HardhatViemHelpers, PublicClient, TestClient } from "@nomicfoundation/hardhat-viem/types";
+import type { HardhatViemHelpers, PublicClient, TestClient } from "@nomicfoundation/hardhat-viem/types";
 import { parseEther, zeroAddress, type Address, getAddress } from "viem";
 
 const NFT_CONTRACT_NAME = "SampleMultipleTypeNFT" as const;
