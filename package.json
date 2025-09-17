@@ -12,7 +12,9 @@
     }
   },
   "dependencies": {
-    "@openzeppelin/contracts": "5.4.0"
+    "@nomicfoundation/hardhat-viem": "^3.0.0",
+    "@openzeppelin/contracts": "5.4.0",
+    "viem": "^2.37.6"
   },
   "devDependencies": {
     "@commitlint/cli": "19.8.1",
@@ -25,6 +27,7 @@
     "@nomicfoundation/hardhat-toolbox": "5.0.0",
     "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.0",
     "@nomicfoundation/hardhat-verify": "3.0.2",
+    "@nomicfoundation/hardhat-viem-assertions": "^3.0.2",
     "@nomicfoundation/ignition-core": "^3",
     "@types/chai": "4.3.20",
     "@types/mocha": "10.0.10",
@@ -33,6 +36,7 @@
     "commitizen": "4.3.1",
     "cz-conventional-changelog": "3.3.0",
     "ethers": "6.15.0",
+    "forge-std": "github:foundry-rs/forge-std#v1.9.7",
     "hardhat": "3.0.6",
     "hardhat-gas-reporter": "1.0.10",
     "husky": "9.1.7",

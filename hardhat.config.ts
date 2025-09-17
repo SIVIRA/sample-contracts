@@ -3,6 +3,8 @@ import type { NetworksUserConfig } from "hardhat/types";
 
 import hardhatToolboxMochaEthers from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import hardhatNetworkHelpers from "@nomicfoundation/hardhat-network-helpers";
+import hardhatViem from "@nomicfoundation/hardhat-viem";
+import hardhatViemAssertions from "@nomicfoundation/hardhat-viem-assertions";
 
 const networks: NetworksUserConfig = {
   hardhatMainnet: {
@@ -26,10 +28,7 @@ if (
 }
 
 const config: HardhatUserConfig = {
-  plugins: [
-    hardhatToolboxMochaEthers,
-    hardhatNetworkHelpers,
-  ],
+  plugins: [hardhatToolboxMochaEthers, hardhatNetworkHelpers, hardhatViem, hardhatViemAssertions],
   solidity: {
     version: "0.8.28",
     settings: {
