@@ -1,4 +1,5 @@
-import { expect } from "chai";
+import { test, describe, beforeEach, before } from "node:test";
+import assert from "node:assert";
 import hre from "hardhat";
 import type { HardhatViemHelpers, PublicClient, TestClient } from "@nomicfoundation/hardhat-viem/types";
 import { parseEther, zeroAddress, type Address, getAddress } from "viem";
@@ -40,29 +41,29 @@ describe(NFT_CONTRACT_NAME, () => {
   });
 
   describe("initial state", () => {
-    it("success", async () => {
-      expect(await nft.read.owner()).to.equal(runner);
-      expect(await nft.read.paused()).to.be.true;
-      expect(await nft.read.minTokenType()).to.equal(1n);
-      expect(await nft.read.maxTokenType()).to.equal(BigInt(NFT_MAX_TOKEN_TYPE));
+    test("success", async () => {
+      assert.strictEqual(await nft.read.owner(), runner);
+      assert.strictEqual(await nft.read.paused(), true);
+      assert.strictEqual(await nft.read.minTokenType(), 1n);
+      assert.strictEqual(await nft.read.maxTokenType(), BigInt(NFT_MAX_TOKEN_TYPE));
     });
   });
 
   describe("supportsInterface", () => {
-    it("success", async () => {
-      expect(await nft.read.supportsInterface(["0x00000000"])).to.be.false;
-      expect(await nft.read.supportsInterface(["0x01ffc9a7"])).to.be.true; // ERC165
-      expect(await nft.read.supportsInterface(["0x80ac58cd"])).to.be.true; // ERC721
-      expect(await nft.read.supportsInterface(["0x780e9d63"])).to.be.true; // ERC721Enumerable
-      expect(await nft.read.supportsInterface(["0x5b5e139f"])).to.be.true; // ERC721Metadata
-      expect(await nft.read.supportsInterface(["0x2a55205a"])).to.be.true; // ERC2981
-      expect(await nft.read.supportsInterface(["0x49064906"])).to.be.true; // ERC4906
-      expect(await nft.read.supportsInterface(["0xad092b5c"])).to.be.true; // ERC4907
+    test("success", async () => {
+      assert.strictEqual(await nft.read.supportsInterface(["0x00000000"]), false);
+      assert.strictEqual(await nft.read.supportsInterface(["0x01ffc9a7"]), true); // ERC165
+      assert.strictEqual(await nft.read.supportsInterface(["0x80ac58cd"]), true); // ERC721
+      assert.strictEqual(await nft.read.supportsInterface(["0x780e9d63"]), true); // ERC721Enumerable
+      assert.strictEqual(await nft.read.supportsInterface(["0x5b5e139f"]), true); // ERC721Metadata
+      assert.strictEqual(await nft.read.supportsInterface(["0x2a55205a"]), true); // ERC2981
+      assert.strictEqual(await nft.read.supportsInterface(["0x49064906"]), true); // ERC4906
+      assert.strictEqual(await nft.read.supportsInterface(["0xad092b5c"]), true); // ERC4907
     });
   });
 
   describe("pause, unpause", () => {
-    it("all", async () => {
+    test("all", async () => {
       // pause: failure: EnforcedPause
       await viem.assertions.revertWithCustomError(nft.write.pause([], { account: runner }), nft, "EnforcedPause");
 
@@ -84,22 +85,22 @@ describe(NFT_CONTRACT_NAME, () => {
   });
 
   describe("setMaxTokenType, freezeTokenTypeRange", async () => {
-    it("failure: OwnableUnauthorizedAccount", async () => {
+    test("failure: OwnableUnauthorizedAccount", async () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.setMaxTokenType([BigInt(NFT_MAX_TOKEN_TYPE + 1)], { account: minter }), nft, "OwnableUnauthorizedAccount", [minter]);
 
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.freezeTokenTypeRange([], { account: minter }), nft, "OwnableUnauthorizedAccount", [minter]);
     });
 
-    it("failure: InvalidMaxTokenType", async () => {
+    test("failure: InvalidMaxTokenType", async () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.setMaxTokenType([BigInt(NFT_MAX_TOKEN_TYPE - 1)], { account: runner }), nft, "InvalidMaxTokenType", [BigInt(NFT_MAX_TOKEN_TYPE - 1)]);
     });
 
-    it("success -> failure: TokenTypeRangeFrozen", async () => {
+    test("success -> failure: TokenTypeRangeFrozen", async () => {
       // setMaxTokenType: success
       await nft.write.setMaxTokenType([BigInt(NFT_MAX_TOKEN_TYPE + 1)], { account: runner });
 
-      expect(await nft.read.minTokenType()).to.equal(1n);
-      expect(await nft.read.maxTokenType()).to.equal(BigInt(NFT_MAX_TOKEN_TYPE + 1));
+      assert.strictEqual(await nft.read.minTokenType(), 1n);
+      assert.strictEqual(await nft.read.maxTokenType(), BigInt(NFT_MAX_TOKEN_TYPE + 1));
 
       // freezeTokenTypeRange: success
       await nft.write.freezeTokenTypeRange([], { account: runner });
@@ -116,11 +117,11 @@ describe(NFT_CONTRACT_NAME, () => {
   describe("setBaseTokenURI", () => {
     const BASE_TOKEN_URI = "https://nft-metadata.world/" as const;
 
-    it("failure: OwnableUnauthorizedAccount", async () => {
+    test("failure: OwnableUnauthorizedAccount", async () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.setBaseTokenURI([BASE_TOKEN_URI], { account: minter }), nft, "OwnableUnauthorizedAccount", [minter]);
     });
 
-    it("success: single", async () => {
+    test("success: single", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -130,15 +131,15 @@ describe(NFT_CONTRACT_NAME, () => {
       // airdropByType: success
       await nft.write.airdropByType([holder1, 1n], { account: minter });
 
-      expect(await nft.read.tokenURI([0n])).to.equal("");
+      assert.strictEqual(await nft.read.tokenURI([0n]), "");
 
       // setBaseTokenURI: success: single
       await viem.assertions.emitWithArgs(nft.write.setBaseTokenURI([BASE_TOKEN_URI], { account: runner }), nft, "MetadataUpdate", [0n]);
 
-      expect(await nft.read.tokenURI([0n])).to.equal(BASE_TOKEN_URI + "1/0");
+      assert.strictEqual(await nft.read.tokenURI([0n]), BASE_TOKEN_URI + "1/0");
     });
 
-    it("success: plural", async () => {
+    test("success: plural", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -149,14 +150,14 @@ describe(NFT_CONTRACT_NAME, () => {
       await nft.write.airdropByType([holder1, 1n], { account: minter });
       await nft.write.airdropByType([holder2, 1n], { account: minter });
 
-      expect(await nft.read.tokenURI([0n])).to.equal("");
-      expect(await nft.read.tokenURI([1n])).to.equal("");
+      assert.strictEqual(await nft.read.tokenURI([0n]), "");
+      assert.strictEqual(await nft.read.tokenURI([1n]), "");
 
       // setBaseTokenURI: success: plural
       await viem.assertions.emitWithArgs(nft.write.setBaseTokenURI([BASE_TOKEN_URI], { account: runner }), nft, "BatchMetadataUpdate", [0n, 1n]);
 
-      expect(await nft.read.tokenURI([0n])).to.equal(BASE_TOKEN_URI + "1/0");
-      expect(await nft.read.tokenURI([1n])).to.equal(BASE_TOKEN_URI + "1/1");
+      assert.strictEqual(await nft.read.tokenURI([0n]), BASE_TOKEN_URI + "1/0");
+      assert.strictEqual(await nft.read.tokenURI([1n]), BASE_TOKEN_URI + "1/1");
     });
   });
 
@@ -164,19 +165,19 @@ describe(NFT_CONTRACT_NAME, () => {
     const BASE_TOKEN_URI = "https://nft-metadata.world/" as const;
     const TOKEN_URI = "https://nft-metadata.world/0x0" as const;
 
-    it("failure: OwnableUnauthorizedAccount", async () => {
+    test("failure: OwnableUnauthorizedAccount", async () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.setTokenURI([0n, TOKEN_URI], { account: minter }), nft, "OwnableUnauthorizedAccount", [minter]);
 
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.freezeTokenURI([0n], { account: minter }), nft, "OwnableUnauthorizedAccount", [minter]);
     });
 
-    it("failure: ERC721NonexistentToken", async () => {
+    test("failure: ERC721NonexistentToken", async () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.setTokenURI([0n, TOKEN_URI], { account: runner }), nft, "ERC721NonexistentToken", [0n]);
 
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.freezeTokenURI([0n], { account: runner }), nft, "ERC721NonexistentToken", [0n]);
     });
 
-    it("success -> failure: TokenURIFrozen", async () => {
+    test("success -> failure: TokenURIFrozen", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -186,17 +187,17 @@ describe(NFT_CONTRACT_NAME, () => {
       // airdropByType: success
       await nft.write.airdropByType([holder1, 1n], { account: minter });
 
-      expect(await nft.read.tokenURI([0n])).to.equal("");
+      assert.strictEqual(await nft.read.tokenURI([0n]), "");
 
       // setBaseTokenURI: success
       await nft.write.setBaseTokenURI([BASE_TOKEN_URI], { account: runner });
 
-      expect(await nft.read.tokenURI([0n])).to.equal(BASE_TOKEN_URI + "1/0");
+      assert.strictEqual(await nft.read.tokenURI([0n]), BASE_TOKEN_URI + "1/0");
 
       // setTokenURI: success
       await viem.assertions.emitWithArgs(nft.write.setTokenURI([0n, TOKEN_URI], { account: runner }), nft, "MetadataUpdate", [0n]);
 
-      expect(await nft.read.tokenURI([0n])).to.equal(TOKEN_URI);
+      assert.strictEqual(await nft.read.tokenURI([0n]), TOKEN_URI);
 
       // freezeTokenURI: success
       await viem.assertions.emitWithArgs(nft.write.freezeTokenURI([0n], { account: runner }), nft, "PermanentURI", [TOKEN_URI, 0n]);
@@ -210,17 +211,17 @@ describe(NFT_CONTRACT_NAME, () => {
   });
 
   describe("airdrop", () => {
-    it("failure: UnsupportedFunction", async () => {
+    test("failure: UnsupportedFunction", async () => {
       await viem.assertions.revertWithCustomError(nft.write.airdrop([holder1], { account: minter }), nft, "UnsupportedFunction");
     });
   });
 
   describe("airdropByType", () => {
-    it("failure: InvalidMinter", async () => {
+    test("failure: InvalidMinter", async () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.airdropByType([holder1, 1n], { account: minter }), nft, "InvalidMinter", [minter]);
     });
 
-    it("failure: EnforcedPause", async () => {
+    test("failure: EnforcedPause", async () => {
       // addMinter: success
       await nft.write.addMinter([minter], { account: runner });
 
@@ -228,7 +229,7 @@ describe(NFT_CONTRACT_NAME, () => {
       await viem.assertions.revertWithCustomError(nft.write.airdropByType([holder1, 1n], { account: minter }), nft, "EnforcedPause");
     });
 
-    it("failure: InvalidTokenType", async () => {
+    test("failure: InvalidTokenType", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -240,22 +241,22 @@ describe(NFT_CONTRACT_NAME, () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.airdropByType([holder1, BigInt(NFT_MAX_TOKEN_TYPE + 1)], { account: minter }), nft, "InvalidTokenType", [BigInt(NFT_MAX_TOKEN_TYPE + 1)]);
     });
 
-    it("success", async () => {
+    test("success", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
       // addMinter: success
       await nft.write.addMinter([minter], { account: runner });
 
-      expect(await nft.read.balanceOf([holder1])).to.equal(0n);
+      assert.strictEqual(await nft.read.balanceOf([holder1]), 0n);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.ownerOf([0n]), nft, "ERC721NonexistentToken", [0n]);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.tokenOfOwnerByIndex([holder1, 0n]), nft, "ERC721OutOfBoundsIndex", [holder1, 0n]);
-      expect(await nft.read.totalSupply()).to.equal(0n);
+      assert.strictEqual(await nft.read.totalSupply(), 0n);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.tokenByIndex([0n]), nft, "ERC721OutOfBoundsIndex", [zeroAddress, 0n]);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.tokenURI([0n]), nft, "ERC721NonexistentToken", [0n]);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.tokenType([0n]), nft, "ERC721NonexistentToken", [0n]);
-      expect(await nft.read.typeSupply([1n])).to.equal(0n);
-      expect(await nft.read.typeBalanceOf([holder1, 1n])).to.equal(0n);
+      assert.strictEqual(await nft.read.typeSupply([1n]), 0n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 1n]), 0n);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.firstOwnerOf([0n]), nft, "ERC721NonexistentToken", [0n]);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.holdingPeriod([0n]), nft, "ERC721NonexistentToken", [0n]);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.royaltyInfo([0n, parseEther("1")]), nft, "ERC721NonexistentToken", [0n]);
@@ -267,34 +268,34 @@ describe(NFT_CONTRACT_NAME, () => {
 
       const holdingStartedAt = await publicClient.getBlock().then((block: any) => BigInt(block.timestamp));
 
-      expect(await nft.read.balanceOf([holder1])).to.equal(1n);
-      expect(await nft.read.ownerOf([0n])).to.equal(holder1);
-      expect(await nft.read.tokenOfOwnerByIndex([holder1, 0n])).to.equal(0n);
-      expect(await nft.read.totalSupply()).to.equal(1n);
-      expect(await nft.read.tokenByIndex([0n])).to.equal(0n);
-      expect(await nft.read.tokenURI([0n])).to.equal("");
-      expect(await nft.read.tokenType([0n])).to.equal(1n);
-      expect(await nft.read.typeSupply([1n])).to.equal(1n);
-      expect(await nft.read.typeBalanceOf([holder1, 1n])).to.equal(1n);
-      expect(await nft.read.firstOwnerOf([0n])).to.equal(holder1);
-      expect(await nft.read.holdingPeriod([0n])).to.equal(0n);
+      assert.strictEqual(await nft.read.balanceOf([holder1]), 1n);
+      assert.strictEqual(await nft.read.ownerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.tokenOfOwnerByIndex([holder1, 0n]), 0n);
+      assert.strictEqual(await nft.read.totalSupply(), 1n);
+      assert.strictEqual(await nft.read.tokenByIndex([0n]), 0n);
+      assert.strictEqual(await nft.read.tokenURI([0n]), "");
+      assert.strictEqual(await nft.read.tokenType([0n]), 1n);
+      assert.strictEqual(await nft.read.typeSupply([1n]), 1n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 1n]), 1n);
+      assert.strictEqual(await nft.read.firstOwnerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.holdingPeriod([0n]), 0n);
       {
         const [receiver, amount] = await nft.read.royaltyInfo([0n, parseEther("1")]);
-        expect(receiver).to.equal(runner);
-        expect(amount).to.equal(0n);
+        assert.strictEqual(receiver, runner);
+        assert.strictEqual(amount, 0n);
       }
-      expect(await nft.read.userOf([0n])).to.equal(zeroAddress);
-      expect(await nft.read.userExpires([0n])).to.equal(0n);
+      assert.strictEqual(await nft.read.userOf([0n]), zeroAddress);
+      assert.strictEqual(await nft.read.userExpires([0n]), 0n);
 
       // time passed
       await testClient.increaseTime({ seconds: Number(DUMMY_PERIOD) });
       const currentBlock = await publicClient.getBlock();
       const currentTime = BigInt(currentBlock.timestamp);
 
-      expect(await nft.read.holdingPeriod([0n])).to.equal(currentTime - holdingStartedAt);
+      assert.strictEqual(await nft.read.holdingPeriod([0n]), currentTime - holdingStartedAt);
     });
 
-    it("success -> failure: AlreadyAirdropped -> success", async () => {
+    test("success -> failure: AlreadyAirdropped -> success", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -310,26 +311,26 @@ describe(NFT_CONTRACT_NAME, () => {
       // airdropByType: success
       await nft.write.airdropByType([holder1, 2n], { account: minter });
 
-      expect(await nft.read.balanceOf([holder1])).to.equal(2n);
-      expect(await nft.read.ownerOf([0n])).to.equal(holder1);
-      expect(await nft.read.ownerOf([1n])).to.equal(holder1);
-      expect(await nft.read.typeBalanceOf([holder1, 1n])).to.equal(1n);
-      expect(await nft.read.typeBalanceOf([holder1, 2n])).to.equal(1n);
+      assert.strictEqual(await nft.read.balanceOf([holder1]), 2n);
+      assert.strictEqual(await nft.read.ownerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.ownerOf([1n]), holder1);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 1n]), 1n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 2n]), 1n);
     });
   });
 
   describe("airdropWithTokenURI", () => {
-    it("failure: UnsupportedFunction", async () => {
+    test("failure: UnsupportedFunction", async () => {
       await viem.assertions.revertWithCustomError(nft.write.airdropWithTokenURI([holder1, ""], { account: minter }), nft, "UnsupportedFunction");
     });
   });
 
   describe("bulkAirdropByType", () => {
-    it("failure: InvalidMinter", async () => {
+    test("failure: InvalidMinter", async () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.bulkAirdropByType([[holder1], 1n], { account: minter }), nft, "InvalidMinter", [minter]);
     });
 
-    it("failure: EnforcedPause", async () => {
+    test("failure: EnforcedPause", async () => {
       // addMinter: success
       await nft.write.addMinter([minter], { account: runner });
 
@@ -337,7 +338,7 @@ describe(NFT_CONTRACT_NAME, () => {
       await viem.assertions.revertWithCustomError(nft.write.bulkAirdropByType([[holder1], 1n], { account: minter }), nft, "EnforcedPause");
     });
 
-    it("failure: InvalidTokenType", async () => {
+    test("failure: InvalidTokenType", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -349,32 +350,32 @@ describe(NFT_CONTRACT_NAME, () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.bulkAirdropByType([[holder1], BigInt(NFT_MAX_TOKEN_TYPE + 1)], { account: minter }), nft, "InvalidTokenType", [BigInt(NFT_MAX_TOKEN_TYPE + 1)]);
     });
 
-    it("success", async () => {
+    test("success", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
       // addMinter: success
       await nft.write.addMinter([minter], { account: runner });
 
-      expect(await nft.read.balanceOf([holder1])).to.equal(0n);
-      expect(await nft.read.typeBalanceOf([holder1, 1n])).to.equal(0n);
+      assert.strictEqual(await nft.read.balanceOf([holder1]), 0n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 1n]), 0n);
 
-      expect(await nft.read.balanceOf([holder2])).to.equal(0n);
-      expect(await nft.read.typeBalanceOf([holder2, 1n])).to.equal(0n);
+      assert.strictEqual(await nft.read.balanceOf([holder2]), 0n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder2, 1n]), 0n);
 
       // bulkAirdropByType: success
       await viem.assertions.emitWithArgs(nft.write.bulkAirdropByType([[holder1, holder2], 1n], { account: minter }), nft, "Transfer", [zeroAddress, holder1, 0n]);
 
-      expect(await nft.read.balanceOf([holder1])).to.equal(1n);
-      expect(await nft.read.ownerOf([0n])).to.equal(holder1);
-      expect(await nft.read.typeBalanceOf([holder1, 1n])).to.equal(1n);
+      assert.strictEqual(await nft.read.balanceOf([holder1]), 1n);
+      assert.strictEqual(await nft.read.ownerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 1n]), 1n);
 
-      expect(await nft.read.balanceOf([holder2])).to.equal(1n);
-      expect(await nft.read.ownerOf([1n])).to.equal(holder2);
-      expect(await nft.read.typeBalanceOf([holder2, 1n])).to.equal(1n);
+      assert.strictEqual(await nft.read.balanceOf([holder2]), 1n);
+      assert.strictEqual(await nft.read.ownerOf([1n]), holder2);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder2, 1n]), 1n);
     });
 
-    it("success -> failure: AlreadyAirdropped -> success", async () => {
+    test("success -> failure: AlreadyAirdropped -> success", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -390,18 +391,18 @@ describe(NFT_CONTRACT_NAME, () => {
       // bulkAirdropByType: success
       await nft.write.bulkAirdropByType([[holder1], 2n], { account: minter });
 
-      expect(await nft.read.balanceOf([holder1])).to.equal(2n);
-      expect(await nft.read.ownerOf([0n])).to.equal(holder1);
-      expect(await nft.read.ownerOf([1n])).to.equal(holder1);
-      expect(await nft.read.typeBalanceOf([holder1, 1n])).to.equal(1n);
-      expect(await nft.read.typeBalanceOf([holder1, 2n])).to.equal(1n);
+      assert.strictEqual(await nft.read.balanceOf([holder1]), 2n);
+      assert.strictEqual(await nft.read.ownerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.ownerOf([1n]), holder1);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 1n]), 1n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 2n]), 1n);
     });
   });
 
   describe("safeTransferFrom", () => {
     const TOKEN_URI = "https://nft-metadata.world/0x0" as const;
 
-    it("success: from holder1 to holder2", async () => {
+    test("success: from holder1 to holder2", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -425,55 +426,55 @@ describe(NFT_CONTRACT_NAME, () => {
       const currentBlock = await publicClient.getBlock();
       const currentTime = BigInt(currentBlock.timestamp);
 
-      expect(await nft.read.balanceOf([holder1])).to.equal(1n);
-      expect(await nft.read.balanceOf([holder2])).to.equal(0n);
-      expect(await nft.read.ownerOf([0n])).to.equal(holder1);
-      expect(await nft.read.tokenOfOwnerByIndex([holder1, 0n])).to.equal(0n);
+      assert.strictEqual(await nft.read.balanceOf([holder1]), 1n);
+      assert.strictEqual(await nft.read.balanceOf([holder2]), 0n);
+      assert.strictEqual(await nft.read.ownerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.tokenOfOwnerByIndex([holder1, 0n]), 0n);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.tokenOfOwnerByIndex([holder2, 0n]), nft, "ERC721OutOfBoundsIndex", [holder2, 0n]);
-      expect(await nft.read.totalSupply()).to.equal(1n);
-      expect(await nft.read.tokenByIndex([0n])).to.equal(0n);
-      expect(await nft.read.tokenURI([0n])).to.equal(TOKEN_URI);
-      expect(await nft.read.tokenType([0n])).to.equal(1n);
-      expect(await nft.read.typeSupply([1n])).to.equal(1n);
-      expect(await nft.read.typeBalanceOf([holder1, 1n])).to.equal(1n);
-      expect(await nft.read.typeBalanceOf([holder2, 1n])).to.equal(0n);
-      expect(await nft.read.firstOwnerOf([0n])).to.equal(holder1);
-      expect(await nft.read.holdingPeriod([0n])).to.equal(currentTime - holdingStartedAt);
+      assert.strictEqual(await nft.read.totalSupply(), 1n);
+      assert.strictEqual(await nft.read.tokenByIndex([0n]), 0n);
+      assert.strictEqual(await nft.read.tokenURI([0n]), TOKEN_URI);
+      assert.strictEqual(await nft.read.tokenType([0n]), 1n);
+      assert.strictEqual(await nft.read.typeSupply([1n]), 1n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 1n]), 1n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder2, 1n]), 0n);
+      assert.strictEqual(await nft.read.firstOwnerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.holdingPeriod([0n]), currentTime - holdingStartedAt);
       {
         const [receiver, amount] = await nft.read.royaltyInfo([0n, parseEther("1")]);
-        expect(receiver).to.equal(runner);
-        expect(amount).to.equal(0n);
+        assert.strictEqual(receiver, runner);
+        assert.strictEqual(amount, 0n);
       }
-      expect(await nft.read.userOf([0n])).to.equal(holder2);
-      expect(await nft.read.userExpires([0n])).to.equal(userExpiredAt);
+      assert.strictEqual(await nft.read.userOf([0n]), holder2);
+      assert.strictEqual(await nft.read.userExpires([0n]), userExpiredAt);
 
       // safeTransferFrom: success
       await viem.assertions.emitWithArgs(nft.write.safeTransferFrom([holder1, holder2, 0n], { account: holder1 }), nft, "Transfer", [holder1, holder2, 0n]);
 
-      expect(await nft.read.balanceOf([holder1])).to.equal(0n);
-      expect(await nft.read.balanceOf([holder2])).to.equal(1n);
-      expect(await nft.read.ownerOf([0n])).to.equal(holder2);
+      assert.strictEqual(await nft.read.balanceOf([holder1]), 0n);
+      assert.strictEqual(await nft.read.balanceOf([holder2]), 1n);
+      assert.strictEqual(await nft.read.ownerOf([0n]), holder2);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.tokenOfOwnerByIndex([holder1, 0n]), nft, "ERC721OutOfBoundsIndex", [holder1, 0n]);
-      expect(await nft.read.tokenOfOwnerByIndex([holder2, 0n])).to.equal(0n);
-      expect(await nft.read.totalSupply()).to.equal(1n);
-      expect(await nft.read.tokenByIndex([0n])).to.equal(0n);
-      expect(await nft.read.tokenURI([0n])).to.equal(TOKEN_URI);
-      expect(await nft.read.tokenType([0n])).to.equal(1n);
-      expect(await nft.read.typeSupply([1n])).to.equal(1n);
-      expect(await nft.read.typeBalanceOf([holder1, 1n])).to.equal(0n);
-      expect(await nft.read.typeBalanceOf([holder2, 1n])).to.equal(1n);
-      expect(await nft.read.firstOwnerOf([0n])).to.equal(holder1);
-      expect(await nft.read.holdingPeriod([0n])).to.equal(0n);
+      assert.strictEqual(await nft.read.tokenOfOwnerByIndex([holder2, 0n]), 0n);
+      assert.strictEqual(await nft.read.totalSupply(), 1n);
+      assert.strictEqual(await nft.read.tokenByIndex([0n]), 0n);
+      assert.strictEqual(await nft.read.tokenURI([0n]), TOKEN_URI);
+      assert.strictEqual(await nft.read.tokenType([0n]), 1n);
+      assert.strictEqual(await nft.read.typeSupply([1n]), 1n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 1n]), 0n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder2, 1n]), 1n);
+      assert.strictEqual(await nft.read.firstOwnerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.holdingPeriod([0n]), 0n);
       {
         const [receiver, amount] = await nft.read.royaltyInfo([0n, parseEther("1")]);
-        expect(receiver).to.equal(runner);
-        expect(amount).to.equal(0n);
+        assert.strictEqual(receiver, runner);
+        assert.strictEqual(amount, 0n);
       }
-      expect(await nft.read.userOf([0n])).to.equal(zeroAddress);
-      expect(await nft.read.userExpires([0n])).to.equal(0n);
+      assert.strictEqual(await nft.read.userOf([0n]), zeroAddress);
+      assert.strictEqual(await nft.read.userExpires([0n]), 0n);
     });
 
-    it("success: from holder1 to holder1", async () => {
+    test("success: from holder1 to holder1", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -497,24 +498,24 @@ describe(NFT_CONTRACT_NAME, () => {
       const currentBlock = await publicClient.getBlock();
       const currentTime = BigInt(currentBlock.timestamp);
 
-      expect(await nft.read.balanceOf([holder1])).to.equal(1n);
-      expect(await nft.read.ownerOf([0n])).to.equal(holder1);
-      expect(await nft.read.tokenOfOwnerByIndex([holder1, 0n])).to.equal(0n);
-      expect(await nft.read.totalSupply()).to.equal(1n);
-      expect(await nft.read.tokenByIndex([0n])).to.equal(0n);
-      expect(await nft.read.tokenURI([0n])).to.equal(TOKEN_URI);
-      expect(await nft.read.tokenType([0n])).to.equal(1n);
-      expect(await nft.read.typeSupply([1n])).to.equal(1n);
-      expect(await nft.read.typeBalanceOf([holder1, 1n])).to.equal(1n);
-      expect(await nft.read.firstOwnerOf([0n])).to.equal(holder1);
-      expect(await nft.read.holdingPeriod([0n])).to.equal(currentTime - holdingStartedAt);
+      assert.strictEqual(await nft.read.balanceOf([holder1]), 1n);
+      assert.strictEqual(await nft.read.ownerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.tokenOfOwnerByIndex([holder1, 0n]), 0n);
+      assert.strictEqual(await nft.read.totalSupply(), 1n);
+      assert.strictEqual(await nft.read.tokenByIndex([0n]), 0n);
+      assert.strictEqual(await nft.read.tokenURI([0n]), TOKEN_URI);
+      assert.strictEqual(await nft.read.tokenType([0n]), 1n);
+      assert.strictEqual(await nft.read.typeSupply([1n]), 1n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 1n]), 1n);
+      assert.strictEqual(await nft.read.firstOwnerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.holdingPeriod([0n]), currentTime - holdingStartedAt);
       {
         const [receiver, amount] = await nft.read.royaltyInfo([0n, parseEther("1")]);
-        expect(receiver).to.equal(runner);
-        expect(amount).to.equal(0n);
+        assert.strictEqual(receiver, runner);
+        assert.strictEqual(amount, 0n);
       }
-      expect(await nft.read.userOf([0n])).to.equal(holder2);
-      expect(await nft.read.userExpires([0n])).to.equal(userExpiredAt);
+      assert.strictEqual(await nft.read.userOf([0n]), holder2);
+      assert.strictEqual(await nft.read.userExpires([0n]), userExpiredAt);
 
       // safeTransferFrom: success
       await viem.assertions.emitWithArgs(nft.write.safeTransferFrom([holder1, holder1, 0n], { account: holder1 }), nft, "Transfer", [holder1, holder1, 0n]);
@@ -522,35 +523,35 @@ describe(NFT_CONTRACT_NAME, () => {
       const updatedBlock = await publicClient.getBlock();
       const updatedTime = BigInt(updatedBlock.timestamp);
 
-      expect(await nft.read.balanceOf([holder1])).to.equal(1n);
-      expect(await nft.read.ownerOf([0n])).to.equal(holder1);
-      expect(await nft.read.tokenOfOwnerByIndex([holder1, 0n])).to.equal(0n);
-      expect(await nft.read.totalSupply()).to.equal(1n);
-      expect(await nft.read.tokenByIndex([0n])).to.equal(0n);
-      expect(await nft.read.tokenURI([0n])).to.equal(TOKEN_URI);
-      expect(await nft.read.tokenType([0n])).to.equal(1n);
-      expect(await nft.read.typeSupply([1n])).to.equal(1n);
-      expect(await nft.read.typeBalanceOf([holder1, 1n])).to.equal(1n);
-      expect(await nft.read.firstOwnerOf([0n])).to.equal(holder1);
-      expect(await nft.read.holdingPeriod([0n])).to.equal(updatedTime - holdingStartedAt);
+      assert.strictEqual(await nft.read.balanceOf([holder1]), 1n);
+      assert.strictEqual(await nft.read.ownerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.tokenOfOwnerByIndex([holder1, 0n]), 0n);
+      assert.strictEqual(await nft.read.totalSupply(), 1n);
+      assert.strictEqual(await nft.read.tokenByIndex([0n]), 0n);
+      assert.strictEqual(await nft.read.tokenURI([0n]), TOKEN_URI);
+      assert.strictEqual(await nft.read.tokenType([0n]), 1n);
+      assert.strictEqual(await nft.read.typeSupply([1n]), 1n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 1n]), 1n);
+      assert.strictEqual(await nft.read.firstOwnerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.holdingPeriod([0n]), updatedTime - holdingStartedAt);
       {
         const [receiver, amount] = await nft.read.royaltyInfo([0n, parseEther("1")]);
-        expect(receiver).to.equal(runner);
-        expect(amount).to.equal(0n);
+        assert.strictEqual(receiver, runner);
+        assert.strictEqual(amount, 0n);
       }
-      expect(await nft.read.userOf([0n])).to.equal(holder2);
-      expect(await nft.read.userExpires([0n])).to.equal(userExpiredAt);
+      assert.strictEqual(await nft.read.userOf([0n]), holder2);
+      assert.strictEqual(await nft.read.userExpires([0n]), userExpiredAt);
     });
   });
 
   describe("burn", () => {
     const TOKEN_URI = "https://nft-metadata.world/0x0" as const;
 
-    it("failure: ERC721NonexistentToken", async () => {
+    test("failure: ERC721NonexistentToken", async () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.burn([0n], { account: runner }), nft, "ERC721NonexistentToken", [0n]);
     });
 
-    it("failure: ERC721InsufficientApproval", async () => {
+    test("failure: ERC721InsufficientApproval", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -564,7 +565,7 @@ describe(NFT_CONTRACT_NAME, () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.burn([0n], { account: runner }), nft, "ERC721InsufficientApproval", [runner, 0n]);
     });
 
-    it("success", async () => {
+    test("success", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -588,38 +589,38 @@ describe(NFT_CONTRACT_NAME, () => {
       const currentBlock = await publicClient.getBlock();
       const currentTime = BigInt(currentBlock.timestamp);
 
-      expect(await nft.read.balanceOf([holder1])).to.equal(1n);
-      expect(await nft.read.ownerOf([0n])).to.equal(holder1);
-      expect(await nft.read.tokenOfOwnerByIndex([holder1, 0n])).to.equal(0n);
-      expect(await nft.read.totalSupply()).to.equal(1n);
-      expect(await nft.read.tokenByIndex([0n])).to.equal(0n);
-      expect(await nft.read.tokenURI([0n])).to.equal(TOKEN_URI);
-      expect(await nft.read.tokenType([0n])).to.equal(1n);
-      expect(await nft.read.typeSupply([1n])).to.equal(1n);
-      expect(await nft.read.typeBalanceOf([holder1, 1n])).to.equal(1n);
-      expect(await nft.read.firstOwnerOf([0n])).to.equal(holder1);
-      expect(await nft.read.holdingPeriod([0n])).to.equal(currentTime - holdingStartedAt);
+      assert.strictEqual(await nft.read.balanceOf([holder1]), 1n);
+      assert.strictEqual(await nft.read.ownerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.tokenOfOwnerByIndex([holder1, 0n]), 0n);
+      assert.strictEqual(await nft.read.totalSupply(), 1n);
+      assert.strictEqual(await nft.read.tokenByIndex([0n]), 0n);
+      assert.strictEqual(await nft.read.tokenURI([0n]), TOKEN_URI);
+      assert.strictEqual(await nft.read.tokenType([0n]), 1n);
+      assert.strictEqual(await nft.read.typeSupply([1n]), 1n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 1n]), 1n);
+      assert.strictEqual(await nft.read.firstOwnerOf([0n]), holder1);
+      assert.strictEqual(await nft.read.holdingPeriod([0n]), currentTime - holdingStartedAt);
       {
         const [receiver, amount] = await nft.read.royaltyInfo([0n, parseEther("1")]);
-        expect(receiver).to.equal(runner);
-        expect(amount).to.equal(0n);
+        assert.strictEqual(receiver, runner);
+        assert.strictEqual(amount, 0n);
       }
-      expect(await nft.read.userOf([0n])).to.equal(holder2);
-      expect(await nft.read.userExpires([0n])).to.equal(userExpiredAt);
+      assert.strictEqual(await nft.read.userOf([0n]), holder2);
+      assert.strictEqual(await nft.read.userExpires([0n]), userExpiredAt);
 
       // burn: success
       await viem.assertions.emitWithArgs(nft.write.burn([0n], { account: holder1 }), nft, "Transfer", [holder1, zeroAddress, 0n]);
 
-      expect(await nft.read.balanceOf([holder1])).to.equal(0n);
+      assert.strictEqual(await nft.read.balanceOf([holder1]), 0n);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.ownerOf([0n]), nft, "ERC721NonexistentToken", [0n]);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.tokenOfOwnerByIndex([holder1, 0n]), nft, "ERC721OutOfBoundsIndex", [holder1, 0n]);
-      expect(await nft.read.totalSupply()).to.equal(0n);
+      assert.strictEqual(await nft.read.totalSupply(), 0n);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.tokenByIndex([0n]), nft, "ERC721OutOfBoundsIndex", [zeroAddress, 0n]);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.tokenURI([0n]), nft, "ERC721NonexistentToken", [0n]);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.tokenType([0n]), nft, "ERC721NonexistentToken", [0n]);
-      expect(await nft.read.typeSupply([1n])).to.equal(0n);
-      expect(await nft.read.typeBalanceOf([holder1, 1n])).to.equal(0n);
-      expect(await nft.read.firstOwnerOf([0n])).to.equal(holder1);
+      assert.strictEqual(await nft.read.typeSupply([1n]), 0n);
+      assert.strictEqual(await nft.read.typeBalanceOf([holder1, 1n]), 0n);
+      assert.strictEqual(await nft.read.firstOwnerOf([0n]), holder1);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.holdingPeriod([0n]), nft, "ERC721NonexistentToken", [0n]);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.royaltyInfo([0n, parseEther("1")]), nft, "ERC721NonexistentToken", [0n]);
       await viem.assertions.revertWithCustomErrorWithArgs(nft.read.userOf([0n]), nft, "ERC721NonexistentToken", [0n]);
@@ -631,13 +632,13 @@ describe(NFT_CONTRACT_NAME, () => {
     const feeNumerator = 300n;
     const feeDenominator = 10000n;
 
-    it("failure: OwnableUnauthorizedAccount", async () => {
+    test("failure: OwnableUnauthorizedAccount", async () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.setDefaultRoyalty([minter, feeNumerator], { account: minter }), nft, "OwnableUnauthorizedAccount", [minter]);
 
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.freezeRoyalty([], { account: minter }), nft, "OwnableUnauthorizedAccount", [minter]);
     });
 
-    it("success -> failure: RoyaltyFrozen", async () => {
+    test("success -> failure: RoyaltyFrozen", async () => {
       // setDefaultRoyalty: success
       await nft.write.setDefaultRoyalty([minter, feeNumerator], { account: runner });
 
@@ -654,8 +655,8 @@ describe(NFT_CONTRACT_NAME, () => {
 
       {
         const [receiver, amount] = await nft.read.royaltyInfo([0n, parseEther("1")]);
-        expect(receiver).to.equal(minter);
-        expect(amount).to.equal((parseEther("1") * feeNumerator) / feeDenominator);
+        assert.strictEqual(receiver, minter);
+        assert.strictEqual(amount, (parseEther("1") * feeNumerator) / feeDenominator);
       }
 
       // freezeRoyalty: success
@@ -670,12 +671,12 @@ describe(NFT_CONTRACT_NAME, () => {
   });
 
   describe("setUser", () => {
-    it("failure: ERC721NonexistentToken", async () => {
+    test("failure: ERC721NonexistentToken", async () => {
       const currentTime = await publicClient.getBlock().then((block: any) => BigInt(block.timestamp));
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.setUser([0n, holder2, currentTime + DUMMY_PERIOD], { account: runner }), nft, "ERC721NonexistentToken", [0n]);
     });
 
-    it("failure: ERC721InsufficientApproval", async () => {
+    test("failure: ERC721InsufficientApproval", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -690,7 +691,7 @@ describe(NFT_CONTRACT_NAME, () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.setUser([0n, holder2, currentTime + DUMMY_PERIOD], { account: runner }), nft, "ERC721InsufficientApproval", [runner, 0n]);
     });
 
-    it("success: by owner", async () => {
+    test("success: by owner", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -703,8 +704,8 @@ describe(NFT_CONTRACT_NAME, () => {
       // airdropByType: success
       await nft.write.airdropByType([holder1, 1n], { account: minter });
 
-      expect(await nft.read.userOf([0n])).to.equal(zeroAddress);
-      expect(await nft.read.userExpires([0n])).to.equal(0n);
+      assert.strictEqual(await nft.read.userOf([0n]), zeroAddress);
+      assert.strictEqual(await nft.read.userExpires([0n]), 0n);
 
       const currentTime = await publicClient.getBlock().then((block: any) => BigInt(block.timestamp));
       const userExpiredAt = currentTime + DUMMY_PERIOD;
@@ -712,8 +713,8 @@ describe(NFT_CONTRACT_NAME, () => {
       // setUser: success: by owner
       await viem.assertions.emitWithArgs(nft.write.setUser([0n, holder2, userExpiredAt], { account: holder1 }), nft, "UpdateUser", [0n, holder2, userExpiredAt]);
 
-      expect(await nft.read.userOf([0n])).to.equal(holder2);
-      expect(await nft.read.userExpires([0n])).to.equal(userExpiredAt);
+      assert.strictEqual(await nft.read.userOf([0n]), holder2);
+      assert.strictEqual(await nft.read.userExpires([0n]), userExpiredAt);
 
       // time passed
       await testClient.increaseTime({ seconds: Number(DUMMY_PERIOD) });
@@ -721,11 +722,11 @@ describe(NFT_CONTRACT_NAME, () => {
       const updatedBlock = await publicClient.getBlock();
       const updatedTime = BigInt(updatedBlock.timestamp);
 
-      expect(await nft.read.userOf([0n])).to.equal(zeroAddress);
-      expect(await nft.read.userExpires([0n])).to.equal(userExpiredAt);
+      assert.strictEqual(await nft.read.userOf([0n]), zeroAddress);
+      assert.strictEqual(await nft.read.userExpires([0n]), userExpiredAt);
     });
 
-    it("success: by approved account", async () => {
+    test("success: by approved account", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -741,8 +742,8 @@ describe(NFT_CONTRACT_NAME, () => {
       // approve: success
       await nft.write.approve([holder2, 0n], { account: holder1 });
 
-      expect(await nft.read.userOf([0n])).to.equal(zeroAddress);
-      expect(await nft.read.userExpires([0n])).to.equal(0n);
+      assert.strictEqual(await nft.read.userOf([0n]), zeroAddress);
+      assert.strictEqual(await nft.read.userExpires([0n]), 0n);
 
       const currentTime = await publicClient.getBlock().then((block: any) => BigInt(block.timestamp));
       const userExpiredAt = currentTime + DUMMY_PERIOD;
@@ -750,8 +751,8 @@ describe(NFT_CONTRACT_NAME, () => {
       // setUser: success: by approved account
       await viem.assertions.emitWithArgs(nft.write.setUser([0n, holder2, userExpiredAt], { account: holder2 }), nft, "UpdateUser", [0n, holder2, userExpiredAt]);
 
-      expect(await nft.read.userOf([0n])).to.equal(holder2);
-      expect(await nft.read.userExpires([0n])).to.equal(userExpiredAt);
+      assert.strictEqual(await nft.read.userOf([0n]), holder2);
+      assert.strictEqual(await nft.read.userExpires([0n]), userExpiredAt);
 
       // time passed
       await testClient.increaseTime({ seconds: Number(DUMMY_PERIOD) });
@@ -759,14 +760,14 @@ describe(NFT_CONTRACT_NAME, () => {
       const updatedBlock = await publicClient.getBlock();
       const updatedTime = BigInt(updatedBlock.timestamp);
 
-      expect(await nft.read.userOf([0n])).to.equal(zeroAddress);
-      expect(await nft.read.userExpires([0n])).to.equal(userExpiredAt);
+      assert.strictEqual(await nft.read.userOf([0n]), zeroAddress);
+      assert.strictEqual(await nft.read.userExpires([0n]), userExpiredAt);
     });
   });
 
   describe("addMinter, removeMinter, freezeMinters", () => {
-    it("all", async () => {
-      expect(await nft.read.isMinter([minter])).to.be.false;
+    test("all", async () => {
+      assert.strictEqual(await nft.read.isMinter([minter]), false);
 
       // freezeMinters: failure: OwnableUnauthorizedAccount
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.freezeMinters([], { account: minter }), nft, "OwnableUnauthorizedAccount", [minter]);
@@ -783,7 +784,7 @@ describe(NFT_CONTRACT_NAME, () => {
       // addMinter: success
       await viem.assertions.emitWithArgs(nft.write.addMinter([minter], { account: runner }), nft, "MinterAdded", [minter]);
 
-      expect(await nft.read.isMinter([minter])).to.be.true;
+      assert.strictEqual(await nft.read.isMinter([minter]), true);
 
       // addMinter: failure: MinterAlreadyAdded
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.addMinter([minter], { account: runner }), nft, "MinterAlreadyAdded", [minter]);
@@ -794,7 +795,7 @@ describe(NFT_CONTRACT_NAME, () => {
       // removeMinter: success
       await viem.assertions.emitWithArgs(nft.write.removeMinter([minter], { account: runner }), nft, "MinterRemoved", [minter]);
 
-      expect(await nft.read.isMinter([minter])).to.be.false;
+      assert.strictEqual(await nft.read.isMinter([minter]), false);
 
       // freezeMinters: success
       await nft.write.freezeMinters([], { account: runner });
@@ -811,11 +812,11 @@ describe(NFT_CONTRACT_NAME, () => {
   });
 
   describe("refreshMetadata", () => {
-    it("failure: OwnableUnauthorizedAccount", async () => {
+    test("failure: OwnableUnauthorizedAccount", async () => {
       await viem.assertions.revertWithCustomErrorWithArgs(nft.write.refreshMetadata([], { account: minter }), nft, "OwnableUnauthorizedAccount", [minter]);
     });
 
-    it("success: single", async () => {
+    test("success: single", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
@@ -829,7 +830,7 @@ describe(NFT_CONTRACT_NAME, () => {
       await viem.assertions.emitWithArgs(nft.write.refreshMetadata([], { account: runner }), nft, "MetadataUpdate", [0n]);
     });
 
-    it("success: plural", async () => {
+    test("success: plural", async () => {
       // unpause: success
       await nft.write.unpause([], { account: runner });
 
