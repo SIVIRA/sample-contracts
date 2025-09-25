@@ -11,13 +11,21 @@ type GasReport = {
     id: string;
     gasFee: bigint;
     txHash: string;
-  }>
-}
+  }>;
+};
 
-export async function loadGasReport(publicClient: PublicClient, deploymentId: string): Promise<GasReport> {
+export async function loadGasReport(
+  publicClient: PublicClient,
+  deploymentId: string
+): Promise<GasReport> {
   // Load: ignition/deployments/<deploymentId>/journal.jsonl
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const journalPath = path.resolve(__dirname, "../ignition/deployments", deploymentId, "journal.jsonl");
+  const journalPath = path.resolve(
+    __dirname,
+    "../ignition/deployments",
+    deploymentId,
+    "journal.jsonl"
+  );
   if (!fs.existsSync(journalPath)) {
     throw new Error(`journal.jsonl が見つかりません: ${journalPath}`);
   }
@@ -40,7 +48,13 @@ export async function loadGasReport(publicClient: PublicClient, deploymentId: st
     if (!receipt) {
       throw new Error(`Failed to get receipt ${txHash}`);
     }
-    const gasFee = (BigInt(receipt.effectiveGasPrice ?? 0n) * BigInt(receipt.gasUsed ?? 0n));
+    let gasFee =
+      BigInt(receipt.effectiveGasPrice ?? 0n) * BigInt(receipt.gasUsed ?? 0n);
+
+    if (receipt.l1Fee) {
+      gasFee += BigInt(receipt.l1Fee);
+    }
+
     if (callId === "deploy") {
       report.deployGasFee = gasFee;
       report.deployTxHash = txHash;
@@ -49,7 +63,7 @@ export async function loadGasReport(publicClient: PublicClient, deploymentId: st
         id: callId,
         gasFee,
         txHash,
-      })
+      });
     }
     report.totalGasFee += gasFee;
   }

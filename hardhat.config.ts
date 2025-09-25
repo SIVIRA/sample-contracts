@@ -9,8 +9,16 @@ import hardhatIgnitionViemPlugin from "@nomicfoundation/hardhat-ignition-viem";
 
 const networks: NetworksUserConfig = {
   hardhatMainnet: {
-    type: "edr-simulated",
+    url: "http://127.0.0.1:8546/",
+    type: "http",
     chainType: "l1",
+    chainId: 31337,
+  },
+  hardhatOp: {
+    url: "http://127.0.0.1:8545/",
+    type: "http",
+    chainType: "op",
+    chainId: 31338,
   },
 };
 if (
