@@ -110,6 +110,8 @@ abstract contract AbsSBNFT is IERC4906, ERC721Enumerable, Ownable, Pausable {
     }
 
     function typeSupply(uint256 tokenType_) external view returns (uint256) {
+        _requireValidTokenType(tokenType_);
+
         return _typeSupply[tokenType_];
     }
 
@@ -117,6 +119,8 @@ abstract contract AbsSBNFT is IERC4906, ERC721Enumerable, Ownable, Pausable {
         address owner_,
         uint256 tokenType_
     ) external view returns (uint256) {
+        _requireValidTokenType(tokenType_);
+
         require(owner_ != address(0), ERC721InvalidOwner(address(0)));
 
         return _typeBalance[owner_][tokenType_];
@@ -206,6 +210,13 @@ abstract contract AbsSBNFT is IERC4906, ERC721Enumerable, Ownable, Pausable {
         _isMintersFrozen = true;
     }
 
+    function _requireValidTokenType(uint256 tokenType_) internal view {
+        require(
+            _minTokenType <= tokenType_ && tokenType_ <= _maxTokenType,
+            InvalidTokenType(tokenType_)
+        );
+    }
+
     function _requireTokenTypeRangeNotFrozen() internal view {
         require(!_isTokenTypeRangeFrozen, TokenTypeRangeFrozen());
     }
@@ -219,10 +230,7 @@ abstract contract AbsSBNFT is IERC4906, ERC721Enumerable, Ownable, Pausable {
     }
 
     function _mint(address to_, uint256 tokenID_, uint256 tokenType_) internal {
-        require(
-            _minTokenType <= tokenType_ && tokenType_ <= _maxTokenType,
-            InvalidTokenType(tokenType_)
-        );
+        _requireValidTokenType(tokenType_);
 
         _tokenType[tokenID_] = tokenType_;
 
