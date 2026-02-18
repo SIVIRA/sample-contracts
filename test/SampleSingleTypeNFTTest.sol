@@ -741,21 +741,21 @@ contract SampleSingleTypeNFTTest is Test {
         uint96 feeDenominator = 10000;
 
         // setDefaultRoyalty: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(royaltyReceiver);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                royaltyReceiver
             )
         );
         nft.setDefaultRoyalty(royaltyReceiver, feeNumerator);
 
         // freezeRoyalty: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(royaltyReceiver);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                royaltyReceiver
             )
         );
         nft.freezeRoyalty();
