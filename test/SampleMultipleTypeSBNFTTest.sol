@@ -113,7 +113,7 @@ contract SampleMultipleTypeSBNFTTest is Test {
                 minter
             )
         );
-        sbnft.setMaxTokenType(MAX_TOKEN_TYPE + 1);
+        sbnft.setMaxTokenType(0);
 
         // freezeTokenTypeRange: failure: OwnableUnauthorizedAccount
         vm.prank(minter);
@@ -130,10 +130,10 @@ contract SampleMultipleTypeSBNFTTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 SampleMultipleTypeSBNFT.InvalidMaxTokenType.selector,
-                MIN_TOKEN_TYPE
+                MAX_TOKEN_TYPE
             )
         );
-        sbnft.setMaxTokenType(MIN_TOKEN_TYPE);
+        sbnft.setMaxTokenType(MAX_TOKEN_TYPE);
 
         // setMaxTokenType: success
         vm.prank(owner);
@@ -318,66 +318,68 @@ contract SampleMultipleTypeSBNFTTest is Test {
         sbnft.addMinter(minter);
 
         assertEq(sbnft.balanceOf(holder1), 0);
-        {
-            vm.expectRevert(
-                abi.encodeWithSelector(
-                    IERC721Errors.ERC721NonexistentToken.selector,
-                    0
-                )
-            );
-            sbnft.ownerOf(0);
-        }
-        {
-            vm.expectRevert(
-                abi.encodeWithSelector(
-                    ERC721Enumerable.ERC721OutOfBoundsIndex.selector,
-                    holder1,
-                    0
-                )
-            );
-            sbnft.tokenOfOwnerByIndex(holder1, 0);
+        for (uint256 tt = MIN_TOKEN_TYPE; tt <= MAX_TOKEN_TYPE; tt++) {
+            {
+                vm.expectRevert(
+                    abi.encodeWithSelector(
+                        IERC721Errors.ERC721NonexistentToken.selector,
+                        tt - MIN_TOKEN_TYPE
+                    )
+                );
+                sbnft.ownerOf(tt - MIN_TOKEN_TYPE);
+            }
+            {
+                vm.expectRevert(
+                    abi.encodeWithSelector(
+                        ERC721Enumerable.ERC721OutOfBoundsIndex.selector,
+                        holder1,
+                        tt - MIN_TOKEN_TYPE
+                    )
+                );
+                sbnft.tokenOfOwnerByIndex(holder1, tt - MIN_TOKEN_TYPE);
+            }
         }
         assertEq(sbnft.totalSupply(), 0);
-        {
-            vm.expectRevert(
-                abi.encodeWithSelector(
-                    ERC721Enumerable.ERC721OutOfBoundsIndex.selector,
-                    address(0),
-                    0
-                )
-            );
-            sbnft.tokenByIndex(0);
-        }
-        {
-            vm.expectRevert(
-                abi.encodeWithSelector(
-                    IERC721Errors.ERC721NonexistentToken.selector,
-                    0
-                )
-            );
-            sbnft.tokenURI(0);
-        }
-        {
-            vm.expectRevert(
-                abi.encodeWithSelector(
-                    IERC721Errors.ERC721NonexistentToken.selector,
-                    0
-                )
-            );
-            sbnft.tokenType(0);
-        }
         for (uint256 tt = MIN_TOKEN_TYPE; tt <= MAX_TOKEN_TYPE; tt++) {
+            {
+                vm.expectRevert(
+                    abi.encodeWithSelector(
+                        ERC721Enumerable.ERC721OutOfBoundsIndex.selector,
+                        address(0),
+                        tt - MIN_TOKEN_TYPE
+                    )
+                );
+                sbnft.tokenByIndex(tt - MIN_TOKEN_TYPE);
+            }
+            {
+                vm.expectRevert(
+                    abi.encodeWithSelector(
+                        IERC721Errors.ERC721NonexistentToken.selector,
+                        tt - MIN_TOKEN_TYPE
+                    )
+                );
+                sbnft.tokenURI(tt - MIN_TOKEN_TYPE);
+            }
+            {
+                vm.expectRevert(
+                    abi.encodeWithSelector(
+                        IERC721Errors.ERC721NonexistentToken.selector,
+                        tt - MIN_TOKEN_TYPE
+                    )
+                );
+                sbnft.tokenType(tt - MIN_TOKEN_TYPE);
+            }
             assertEq(sbnft.typeSupply(tt), 0);
             assertEq(sbnft.typeBalanceOf(holder1, tt), 0);
-        }
-        {
-            vm.expectRevert(
-                abi.encodeWithSelector(
-                    IERC721Errors.ERC721NonexistentToken.selector,
-                    0
-                )
-            );
-            sbnft.holdingPeriod(0);
+            {
+                vm.expectRevert(
+                    abi.encodeWithSelector(
+                        IERC721Errors.ERC721NonexistentToken.selector,
+                        tt - MIN_TOKEN_TYPE
+                    )
+                );
+                sbnft.holdingPeriod(tt - MIN_TOKEN_TYPE);
+            }
         }
 
         // airdropByType: success
@@ -390,18 +392,24 @@ contract SampleMultipleTypeSBNFTTest is Test {
         vm.stopPrank();
 
         assertEq(sbnft.balanceOf(holder1), 3);
-        for (uint256 i = 0; i < 3; i++) {
-            assertEq(sbnft.ownerOf(i), holder1);
-            assertEq(sbnft.tokenOfOwnerByIndex(holder1, i), i);
+        for (uint256 tt = MIN_TOKEN_TYPE; tt <= MAX_TOKEN_TYPE; tt++) {
+            assertEq(sbnft.ownerOf(tt - MIN_TOKEN_TYPE), holder1);
+            assertEq(
+                sbnft.tokenOfOwnerByIndex(holder1, tt - MIN_TOKEN_TYPE),
+                tt - MIN_TOKEN_TYPE
+            );
         }
         assertEq(sbnft.totalSupply(), 3);
-        for (uint256 i = 0; i < 3; i++) {
-            assertEq(sbnft.tokenByIndex(i), i);
-            assertEq(sbnft.tokenURI(i), "");
-            assertEq(sbnft.tokenType(i), i + MIN_TOKEN_TYPE);
-            assertEq(sbnft.typeSupply(i + MIN_TOKEN_TYPE), 1);
-            assertEq(sbnft.typeBalanceOf(holder1, i + MIN_TOKEN_TYPE), 1);
-            assertEq(sbnft.holdingPeriod(i), 0);
+        for (uint256 tt = MIN_TOKEN_TYPE; tt <= MAX_TOKEN_TYPE; tt++) {
+            assertEq(
+                sbnft.tokenByIndex(tt - MIN_TOKEN_TYPE),
+                tt - MIN_TOKEN_TYPE
+            );
+            assertEq(sbnft.tokenURI(tt - MIN_TOKEN_TYPE), "");
+            assertEq(sbnft.tokenType(tt - MIN_TOKEN_TYPE), tt);
+            assertEq(sbnft.typeSupply(tt), 1);
+            assertEq(sbnft.typeBalanceOf(holder1, tt), 1);
+            assertEq(sbnft.holdingPeriod(tt - MIN_TOKEN_TYPE), 0);
         }
 
         // airdropByType: failure: AlreadyAirdropped
@@ -434,8 +442,8 @@ contract SampleMultipleTypeSBNFTTest is Test {
         // time passes...
         vm.warp(block.timestamp + 1 days);
 
-        for (uint256 i = 0; i < 3; i++) {
-            assertEq(sbnft.holdingPeriod(i), 1 days);
+        for (uint256 tt = MIN_TOKEN_TYPE; tt <= MAX_TOKEN_TYPE; tt++) {
+            assertEq(sbnft.holdingPeriod(tt - MIN_TOKEN_TYPE), 1 days);
         }
     }
 
