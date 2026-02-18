@@ -17,7 +17,7 @@ contract SampleSingleTypeSBNFT is IERC4906, IAirdroppableNFT, AbsSBNFT {
     mapping(address to => bool) private _isAirdropped;
 
     constructor()
-        AbsSBNFT(_msgSender(), "Sample Single-type SBNFT", "SBNFT", 0, 0)
+        AbsSBNFT(_msgSender(), "Sample Single-type SBNFT", "SSTSBNFT", 0, 0)
     {
         _isTokenTypeRangeFrozen = true;
     }
