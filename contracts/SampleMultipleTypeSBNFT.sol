@@ -35,7 +35,7 @@ contract SampleMultipleTypeSBNFT is IERC4906, IAirdroppableNFT, AbsSBNFT {
         _requireTokenTypeRangeNotFrozen();
 
         require(
-            maxTokenType_ > _minTokenType,
+            maxTokenType_ > _maxTokenType,
             InvalidMaxTokenType(maxTokenType_)
         );
 
