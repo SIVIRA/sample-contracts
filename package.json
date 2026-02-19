@@ -4,19 +4,19 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@commitlint/cli": "20.4.1",
-    "@commitlint/config-conventional": "20.4.1",
+    "@commitlint/cli": "20.4.2",
+    "@commitlint/config-conventional": "20.4.2",
     "@commitlint/types": "20.4.0",
     "@nomicfoundation/hardhat-ignition": "3.0.7",
     "@nomicfoundation/hardhat-toolbox-viem": "5.0.2",
     "@openzeppelin/contracts": "5.4.0",
-    "@types/node": "25.2.3",
+    "@types/node": "25.3.0",
     "czg": "1.12.0",
     "forge-std": "github:foundry-rs/forge-std#v1.14.0",
     "hardhat": "3.1.8",
     "husky": "9.1.7",
     "typescript": "5.9.3",
-    "viem": "2.46.1"
+    "viem": "2.46.2"
   },
   "packageManager": "pnpm@10.29.3+sha512.498e1fb4cca5aa06c1dcf2611e6fafc50972ffe7189998c409e90de74566444298ffe43e6cd2acdc775ba1aa7cc5e092a8b7054c811ba8c5770f84693d33d2dc"
 }
