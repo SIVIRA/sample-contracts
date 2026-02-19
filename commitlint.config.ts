@@ -1,7 +1,8 @@
-import { UserConfig } from "@commitlint/types";
+import { defineConfig } from "czg";
 
-const config: UserConfig = {
+export default defineConfig({
   extends: ["@commitlint/config-conventional"],
-};
-
-export default config;
+  prompt: {
+    scopes: [],
+  },
+});

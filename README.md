@@ -2,14 +2,14 @@
 
 [![test](https://github.com/SIVIRA/sample-contracts/actions/workflows/test.yaml/badge.svg)](https://github.com/SIVIRA/sample-contracts/actions/workflows/test.yaml)
 
-## Prerequisites
+## Setup
 
 ```
-pnpm install
+make setup
 ```
 
 ## Test
 
 ```
-pnpm test
+make test
 ```

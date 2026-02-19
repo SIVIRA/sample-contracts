@@ -1,30 +1,32 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 
 import {IAirdroppableNFT} from "./IAirdroppableNFT.sol";
-import {BaseNFT} from "./BaseNFT.sol";
+import {AbsNFT} from "./AbsNFT.sol";
 
-error InvalidMaxTokenType(uint256 maxTokenType);
-error AlreadyAirdropped(uint256 tokenType, address to);
+contract SampleMultipleTypeNFT is IERC4906, IAirdroppableNFT, AbsNFT {
+    error InvalidMaxTokenType(uint256 maxTokenType);
+    error AlreadyAirdropped(address to);
+    error NoTokensMinted();
 
-contract SampleMultipleTypeNFT is IERC4906, IAirdroppableNFT, BaseNFT {
-    uint256 private constant _MIN_TOKEN_TYPE = 1;
+    uint256 private constant INITIAL_TOKEN_ID = 0;
 
-    uint256 private _tokenIDCounter;
+    uint256 private _tokenIDCounter = INITIAL_TOKEN_ID;
 
-    mapping(uint256 tokenType => mapping(address to => bool isAirdropped))
-        private _isAirdroppeds;
+    mapping(address to => mapping(uint256 tokenType => bool))
+        private _isAirdropped;
 
     constructor(
+        uint256 minTokenType_,
         uint256 maxTokenType_
     )
-        BaseNFT(
+        AbsNFT(
             _msgSender(),
-            "Sample Multiple Type NFT",
+            "Sample Multiple-type NFT",
             "SMTNFT",
-            _MIN_TOKEN_TYPE,
+            minTokenType_,
             maxTokenType_
         )
     {}
@@ -40,79 +42,42 @@ contract SampleMultipleTypeNFT is IERC4906, IAirdroppableNFT, BaseNFT {
         _maxTokenType = maxTokenType_;
     }
 
-    function setBaseTokenURI(string calldata uri_) external onlyOwner {
-        _baseTokenURI = uri_;
+    function setBaseTokenURI(string calldata baseTokenURI_) external onlyOwner {
+        _baseTokenURI = baseTokenURI_;
 
-        _refreshMetadata();
+        if (_tokenIDCounter > INITIAL_TOKEN_ID) {
+            _refreshMetadata();
+        }
     }
 
     function airdrop(address) external pure {
-        revert IAirdroppableNFT.UnsupportedFunction();
+        revert UnsupportedFunction();
     }
 
     function airdropByType(
         address to_,
         uint256 tokenType_
     ) external onlyMinter whenNotPaused {
-        _requireNotAirdropped(tokenType_, to_);
+        require(!_isAirdropped[to_][tokenType_], AlreadyAirdropped(to_));
 
-        _airdrop(to_, tokenType_, "");
+        _isAirdropped[to_][tokenType_] = true;
+
+        _mint(to_, _tokenIDCounter, tokenType_);
+
+        _tokenIDCounter++;
     }
 
     function airdropWithTokenURI(address, string calldata) external pure {
-        revert IAirdroppableNFT.UnsupportedFunction();
-    }
-
-    function bulkAirdropByType(
-        address[] calldata tos_,
-        uint256 tokenType_
-    ) external onlyMinter whenNotPaused {
-        for (uint256 i = 0; i < tos_.length; i++) {
-            _requireNotAirdropped(tokenType_, tos_[i]);
-
-            _airdrop(tos_[i], tokenType_, "");
-        }
+        revert UnsupportedFunction();
     }
 
     function refreshMetadata() external onlyOwner {
         _refreshMetadata();
     }
 
-    function _requireNotAirdropped(
-        uint256 tokenType_,
-        address to_
-    ) private view {
-        require(
-            !_isAirdroppeds[tokenType_][to_],
-            AlreadyAirdropped(tokenType_, to_)
-        );
-    }
-
-    function _mintedAmount() private view returns (uint256) {
-        return _tokenIDCounter;
-    }
-
-    function _airdrop(
-        address to_,
-        uint256 tokenType_,
-        string memory tokenURI_
-    ) private {
-        _isAirdroppeds[tokenType_][to_] = true;
-
-        _mint(to_, _tokenIDCounter, tokenType_);
-
-        if (bytes(tokenURI_).length > 0) {
-            _tokenURIs[_tokenIDCounter] = tokenURI_;
-        }
-
-        _tokenIDCounter++;
-    }
-
     function _refreshMetadata() private {
-        if (_mintedAmount() == 1) {
-            emit MetadataUpdate(0);
-        } else if (_mintedAmount() > 1) {
-            emit BatchMetadataUpdate(0, _mintedAmount() - 1);
-        }
+        require(_tokenIDCounter > INITIAL_TOKEN_ID, NoTokensMinted());
+
+        emit BatchMetadataUpdate(INITIAL_TOKEN_ID, _tokenIDCounter - 1);
     }
 }

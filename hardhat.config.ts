@@ -1,38 +1,22 @@
-import { HardhatUserConfig } from "hardhat/config";
-import { NetworksUserConfig } from "hardhat/types";
+import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import { defineConfig } from "hardhat/config";
 
-import "@nomicfoundation/hardhat-toolbox";
-import "@nomicfoundation/hardhat-verify";
-
-const networks: NetworksUserConfig = {};
-if (
-  process.env.NETWORK !== undefined &&
-  process.env.RPC_URL !== undefined &&
-  process.env.PRIVATE_KEY !== undefined
-) {
-  networks[process.env.NETWORK] = {
-    url: process.env.RPC_URL,
-    accounts: [process.env.PRIVATE_KEY],
-  };
-}
-
-const config: HardhatUserConfig = {
+export default defineConfig({
+  plugins: [hardhatToolboxViemPlugin],
   solidity: {
-    version: "0.8.28",
+    version: "0.8.33",
     settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-      },
+      viaIR: true,
     },
   },
-  networks: networks,
-  gasReporter: {
-    enabled: true,
+  networks: {
+    hardhatMainnet: {
+      type: "edr-simulated",
+      chainType: "l1",
+    },
+    hardhatOp: {
+      type: "edr-simulated",
+      chainType: "op",
+    },
   },
-  etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
-  },
-};
-
-export default config;
+});

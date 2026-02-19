@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+pragma solidity 0.8.33;
 
 import {IAirdroppableFT} from "./IAirdroppableFT.sol";
-import {BaseFT} from "./BaseFT.sol";
+import {AbsFT} from "./AbsFT.sol";
 
-contract SampleFT is IAirdroppableFT, BaseFT {
+contract SampleFT is IAirdroppableFT, AbsFT {
     constructor(
         uint256 holdingAmountThreshold_
-    ) BaseFT(_msgSender(), "Sample FT", "SFT", holdingAmountThreshold_) {}
+    ) AbsFT(_msgSender(), "Sample FT", "SFT", holdingAmountThreshold_) {}
 
     function airdrop(
         address to_,
