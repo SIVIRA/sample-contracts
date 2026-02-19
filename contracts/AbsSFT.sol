@@ -382,20 +382,20 @@ abstract contract AbsSFT is
             uint256 tokenID_ = tokenIDs_[i];
 
             if (
+                !isBurning &&
+                balanceOf(to_, tokenID_) >= _holdingAmountThreshold[tokenID_] &&
+                _holdingStartedAt[tokenID_][to_] == 0
+            ) {
+                _holdingStartedAt[tokenID_][to_] = block.timestamp;
+            }
+
+            if (
                 !isMinting &&
                 balanceOf(from_, tokenID_) <
                 _holdingAmountThreshold[tokenID_] &&
                 _holdingStartedAt[tokenID_][from_] > 0
             ) {
                 delete _holdingStartedAt[tokenID_][from_];
-            }
-
-            if (
-                !isBurning &&
-                balanceOf(to_, tokenID_) >= _holdingAmountThreshold[tokenID_] &&
-                _holdingStartedAt[tokenID_][to_] == 0
-            ) {
-                _holdingStartedAt[tokenID_][to_] = block.timestamp;
             }
         }
     }
