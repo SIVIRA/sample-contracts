@@ -4,6 +4,8 @@ pragma solidity 0.8.33;
 import {Test as ForgeTest} from "forge-std/Test.sol";
 
 abstract contract Test is ForgeTest {
+    address internal constant ZERO_ADDRESS = address(0);
+
     function toDynamicArray2(
         uint256 element1,
         uint256 element2

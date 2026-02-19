@@ -55,21 +55,21 @@ contract SampleSingleTypeNFTTest is Test {
 
     function testPauseAndUnpause() public {
         // pause: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
         nft.pause();
 
         // unpause: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
         nft.unpause();
@@ -107,11 +107,11 @@ contract SampleSingleTypeNFTTest is Test {
 
     function testFreezeTokenTypeRange() public {
         // freezeTokenTypeRange: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
         nft.freezeTokenTypeRange();
@@ -128,14 +128,14 @@ contract SampleSingleTypeNFTTest is Test {
         string memory baseTokenURI = "https://nft.metadata.com/";
 
         // setBaseTokenURI: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
-        nft.setBaseTokenURI(baseTokenURI);
+        nft.setBaseTokenURI("");
 
         // addMinter: success
         vm.prank(owner);
@@ -171,21 +171,21 @@ contract SampleSingleTypeNFTTest is Test {
         string memory tokenURI = "https://nft.metadata.com/0x0";
 
         // setTokenURI: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
-        nft.setTokenURI(0, tokenURI);
+        nft.setTokenURI(0, "");
 
         // freezeTokenURI: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
         nft.freezeTokenURI(0);
@@ -198,7 +198,7 @@ contract SampleSingleTypeNFTTest is Test {
                 0
             )
         );
-        nft.setTokenURI(0, tokenURI);
+        nft.setTokenURI(0, "");
 
         // freezeTokenURI: failure: ERC721NonexistentToken
         vm.prank(owner);
@@ -246,7 +246,7 @@ contract SampleSingleTypeNFTTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(AbsNFT.TokenURIFrozen.selector, 0)
         );
-        nft.setTokenURI(0, tokenURI);
+        nft.setTokenURI(0, "");
 
         // freezeTokenURI: failure: TokenURIFrozen
         vm.prank(owner);
@@ -293,7 +293,7 @@ contract SampleSingleTypeNFTTest is Test {
             vm.expectRevert(
                 abi.encodeWithSelector(
                     ERC721Enumerable.ERC721OutOfBoundsIndex.selector,
-                    address(0),
+                    ZERO_ADDRESS,
                     0
                 )
             );
@@ -368,7 +368,7 @@ contract SampleSingleTypeNFTTest is Test {
         // airdrop: success
         vm.prank(minter);
         vm.expectEmit(true, true, true, true);
-        emit IERC721.Transfer(address(0), holder1, 0);
+        emit IERC721.Transfer(ZERO_ADDRESS, holder1, 0);
         nft.airdrop(holder1);
 
         assertEq(nft.balanceOf(holder1), 1);
@@ -387,7 +387,7 @@ contract SampleSingleTypeNFTTest is Test {
             assertEq(receiver, owner);
             assertEq(amount, 0);
         }
-        assertEq(nft.userOf(0), address(0));
+        assertEq(nft.userOf(0), ZERO_ADDRESS);
         assertEq(nft.userExpires(0), 0);
 
         // airdrop: failure: AlreadyAirdropped
@@ -409,7 +409,7 @@ contract SampleSingleTypeNFTTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(Pausable.EnforcedPause.selector)
         );
-        nft.airdrop(holder1);
+        nft.airdrop(ZERO_ADDRESS);
 
         // time passes...
         vm.warp(block.timestamp + 1 days);
@@ -424,7 +424,7 @@ contract SampleSingleTypeNFTTest is Test {
                 IAirdroppableNFT.UnsupportedFunction.selector
             )
         );
-        nft.airdropByType(holder1, 0);
+        nft.airdropByType(ZERO_ADDRESS, 0);
     }
 
     function testAirdropWithTokenURI() public {
@@ -434,7 +434,7 @@ contract SampleSingleTypeNFTTest is Test {
                 IAirdroppableNFT.UnsupportedFunction.selector
             )
         );
-        nft.airdropWithTokenURI(holder1, "");
+        nft.airdropWithTokenURI(ZERO_ADDRESS, "");
     }
 
     function testSafeTransferFromHolder1ToHolder2() public {
@@ -485,7 +485,7 @@ contract SampleSingleTypeNFTTest is Test {
         vm.expectEmit(true, true, true, true);
         emit IERC721.Transfer(holder1, holder2, 0);
         vm.expectEmit(true, true, true, true);
-        emit IERC4907.UpdateUser(0, address(0), 0);
+        emit IERC4907.UpdateUser(0, ZERO_ADDRESS, 0);
         nft.safeTransferFrom(holder1, holder2, 0);
 
         assertEq(nft.balanceOf(holder1), 0);
@@ -506,7 +506,7 @@ contract SampleSingleTypeNFTTest is Test {
             assertEq(receiver, owner);
             assertEq(amount, 0);
         }
-        assertEq(nft.userOf(0), address(0));
+        assertEq(nft.userOf(0), ZERO_ADDRESS);
         assertEq(nft.userExpires(0), 0);
     }
 
@@ -598,11 +598,11 @@ contract SampleSingleTypeNFTTest is Test {
         nft.airdrop(holder1);
 
         // burn: failure: ERC721InsufficientApproval
-        vm.prank(owner);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IERC721Errors.ERC721InsufficientApproval.selector,
-                owner,
+                ZERO_ADDRESS,
                 0
             )
         );
@@ -641,9 +641,9 @@ contract SampleSingleTypeNFTTest is Test {
         // burn: success
         vm.prank(holder1);
         vm.expectEmit(true, true, true, true);
-        emit IERC721.Transfer(holder1, address(0), 0);
+        emit IERC721.Transfer(holder1, ZERO_ADDRESS, 0);
         vm.expectEmit(true, true, true, true);
-        emit IERC4907.UpdateUser(0, address(0), 0);
+        emit IERC4907.UpdateUser(0, ZERO_ADDRESS, 0);
         nft.burn(0);
 
         assertEq(nft.balanceOf(holder1), 0);
@@ -671,7 +671,7 @@ contract SampleSingleTypeNFTTest is Test {
             vm.expectRevert(
                 abi.encodeWithSelector(
                     ERC721Enumerable.ERC721OutOfBoundsIndex.selector,
-                    address(0),
+                    ZERO_ADDRESS,
                     0
                 )
             );
@@ -741,21 +741,21 @@ contract SampleSingleTypeNFTTest is Test {
         uint96 feeDenominator = 10000;
 
         // setDefaultRoyalty: failure: OwnableUnauthorizedAccount
-        vm.prank(royaltyReceiver);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                royaltyReceiver
+                ZERO_ADDRESS
             )
         );
-        nft.setDefaultRoyalty(royaltyReceiver, feeNumerator);
+        nft.setDefaultRoyalty(ZERO_ADDRESS, 0);
 
         // freezeRoyalty: failure: OwnableUnauthorizedAccount
-        vm.prank(royaltyReceiver);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                royaltyReceiver
+                ZERO_ADDRESS
             )
         );
         nft.freezeRoyalty();
@@ -795,7 +795,7 @@ contract SampleSingleTypeNFTTest is Test {
         // setDefaultRoyalty: failure: RoyaltyFrozen
         vm.prank(owner);
         vm.expectRevert(abi.encodeWithSelector(AbsNFT.RoyaltyFrozen.selector));
-        nft.setDefaultRoyalty(owner, feeNumerator);
+        nft.setDefaultRoyalty(ZERO_ADDRESS, 0);
 
         // freezeRoyalty: failure: RoyaltyFrozen
         vm.prank(owner);
@@ -805,14 +805,14 @@ contract SampleSingleTypeNFTTest is Test {
 
     function testSetUser() public {
         // setUser: failure: ERC721NonexistentToken
-        vm.prank(owner);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IERC721Errors.ERC721NonexistentToken.selector,
                 0
             )
         );
-        nft.setUser(0, owner, 0);
+        nft.setUser(0, ZERO_ADDRESS, 0);
 
         // addMinter: success
         vm.prank(owner);
@@ -841,7 +841,7 @@ contract SampleSingleTypeNFTTest is Test {
         vm.prank(minter);
         nft.airdrop(holder1);
 
-        assertEq(nft.userOf(0), address(0));
+        assertEq(nft.userOf(0), ZERO_ADDRESS);
         assertEq(nft.userExpires(0), 0);
 
         // setUser: failure: ERC721InsufficientApproval
@@ -867,7 +867,7 @@ contract SampleSingleTypeNFTTest is Test {
         // time passes...
         vm.warp(block.timestamp + 1 days);
 
-        assertEq(nft.userOf(0), address(0));
+        assertEq(nft.userOf(0), ZERO_ADDRESS);
         assertEq(nft.userExpires(0), block.timestamp);
 
         // approve: success
@@ -886,7 +886,7 @@ contract SampleSingleTypeNFTTest is Test {
         // time passes...
         vm.warp(block.timestamp + 1 days);
 
-        assertEq(nft.userOf(0), address(0));
+        assertEq(nft.userOf(0), ZERO_ADDRESS);
         assertEq(nft.userExpires(0), block.timestamp);
     }
 
@@ -894,31 +894,31 @@ contract SampleSingleTypeNFTTest is Test {
         assertFalse(nft.isMinter(minter));
 
         // addMinter: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
-        nft.addMinter(minter);
+        nft.addMinter(ZERO_ADDRESS);
 
         // removeMinter: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
-        nft.removeMinter(minter);
+        nft.removeMinter(ZERO_ADDRESS);
 
         // freezeMinters: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
         nft.freezeMinters();
@@ -926,9 +926,9 @@ contract SampleSingleTypeNFTTest is Test {
         // addMinter: failure: InvalidMinter
         vm.prank(owner);
         vm.expectRevert(
-            abi.encodeWithSelector(AbsNFT.InvalidMinter.selector, address(0))
+            abi.encodeWithSelector(AbsNFT.InvalidMinter.selector, ZERO_ADDRESS)
         );
-        nft.addMinter(address(0));
+        nft.addMinter(ZERO_ADDRESS);
 
         // removeMinter: failure: InvalidMinter
         vm.prank(owner);
@@ -967,12 +967,12 @@ contract SampleSingleTypeNFTTest is Test {
         // addMinter: failure: MintersFrozen
         vm.prank(owner);
         vm.expectRevert(abi.encodeWithSelector(AbsNFT.MintersFrozen.selector));
-        nft.addMinter(minter);
+        nft.addMinter(ZERO_ADDRESS);
 
         // removeMinter: failure: MintersFrozen
         vm.prank(owner);
         vm.expectRevert(abi.encodeWithSelector(AbsNFT.MintersFrozen.selector));
-        nft.removeMinter(minter);
+        nft.removeMinter(ZERO_ADDRESS);
 
         // freezeMinters: failure: MintersFrozen
         vm.prank(owner);
@@ -982,11 +982,11 @@ contract SampleSingleTypeNFTTest is Test {
 
     function testRefreshMetadata() public {
         // refreshMetadata: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
         nft.refreshMetadata();

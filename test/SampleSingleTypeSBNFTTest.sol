@@ -51,21 +51,21 @@ contract SampleSingleTypeSBNFTTest is Test {
 
     function testPauseAndUnpause() public {
         // pause: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
         sbnft.pause();
 
         // unpause: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
         sbnft.unpause();
@@ -103,11 +103,11 @@ contract SampleSingleTypeSBNFTTest is Test {
 
     function testFreezeTokenTypeRange() public {
         // freezeTokenTypeRange: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
         sbnft.freezeTokenTypeRange();
@@ -124,14 +124,14 @@ contract SampleSingleTypeSBNFTTest is Test {
         string memory baseTokenURI = "https://sbnft.metadata.com/";
 
         // setBaseTokenURI: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
-        sbnft.setBaseTokenURI(baseTokenURI);
+        sbnft.setBaseTokenURI("");
 
         // addMinter: success
         vm.prank(owner);
@@ -167,21 +167,21 @@ contract SampleSingleTypeSBNFTTest is Test {
         string memory tokenURI = "https://sbnft.metadata.com/0x0";
 
         // setTokenURI: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
-        sbnft.setTokenURI(0, tokenURI);
+        sbnft.setTokenURI(0, "");
 
         // freezeTokenURI: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
         sbnft.freezeTokenURI(0);
@@ -194,7 +194,7 @@ contract SampleSingleTypeSBNFTTest is Test {
                 0
             )
         );
-        sbnft.setTokenURI(0, tokenURI);
+        sbnft.setTokenURI(0, "");
 
         // freezeTokenURI: failure: ERC721NonexistentToken
         vm.prank(owner);
@@ -242,7 +242,7 @@ contract SampleSingleTypeSBNFTTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(AbsSBNFT.TokenURIFrozen.selector, 0)
         );
-        sbnft.setTokenURI(0, tokenURI);
+        sbnft.setTokenURI(0, "");
 
         // freezeTokenURI: failure: TokenURIFrozen
         vm.prank(owner);
@@ -289,7 +289,7 @@ contract SampleSingleTypeSBNFTTest is Test {
             vm.expectRevert(
                 abi.encodeWithSelector(
                     ERC721Enumerable.ERC721OutOfBoundsIndex.selector,
-                    address(0),
+                    ZERO_ADDRESS,
                     0
                 )
             );
@@ -328,7 +328,7 @@ contract SampleSingleTypeSBNFTTest is Test {
         // airdrop: success
         vm.prank(minter);
         vm.expectEmit(true, true, true, true);
-        emit IERC721.Transfer(address(0), holder1, 0);
+        emit IERC721.Transfer(ZERO_ADDRESS, holder1, 0);
         sbnft.airdrop(holder1);
 
         assertEq(sbnft.balanceOf(holder1), 1);
@@ -361,7 +361,7 @@ contract SampleSingleTypeSBNFTTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(Pausable.EnforcedPause.selector)
         );
-        sbnft.airdrop(holder1);
+        sbnft.airdrop(ZERO_ADDRESS);
 
         // time passes...
         vm.warp(block.timestamp + 1 days);
@@ -376,7 +376,7 @@ contract SampleSingleTypeSBNFTTest is Test {
                 IAirdroppableNFT.UnsupportedFunction.selector
             )
         );
-        sbnft.airdropByType(holder1, 0);
+        sbnft.airdropByType(ZERO_ADDRESS, 0);
     }
 
     function testAirdropWithTokenURI() public {
@@ -386,7 +386,7 @@ contract SampleSingleTypeSBNFTTest is Test {
                 IAirdroppableNFT.UnsupportedFunction.selector
             )
         );
-        sbnft.airdropWithTokenURI(holder1, "");
+        sbnft.airdropWithTokenURI(ZERO_ADDRESS, "");
     }
 
     function testSafeTransferFrom() public {
@@ -425,11 +425,11 @@ contract SampleSingleTypeSBNFTTest is Test {
         sbnft.airdrop(holder1);
 
         // burn: failure: ERC721InsufficientApproval
-        vm.prank(owner);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IERC721Errors.ERC721InsufficientApproval.selector,
-                owner,
+                ZERO_ADDRESS,
                 0
             )
         );
@@ -456,7 +456,7 @@ contract SampleSingleTypeSBNFTTest is Test {
         // burn: success
         vm.prank(holder1);
         vm.expectEmit(true, true, true, true);
-        emit IERC721.Transfer(holder1, address(0), 0);
+        emit IERC721.Transfer(holder1, ZERO_ADDRESS, 0);
         sbnft.burn(0);
 
         assertEq(sbnft.balanceOf(holder1), 0);
@@ -484,7 +484,7 @@ contract SampleSingleTypeSBNFTTest is Test {
             vm.expectRevert(
                 abi.encodeWithSelector(
                     ERC721Enumerable.ERC721OutOfBoundsIndex.selector,
-                    address(0),
+                    ZERO_ADDRESS,
                     0
                 )
             );
@@ -525,31 +525,31 @@ contract SampleSingleTypeSBNFTTest is Test {
         assertFalse(sbnft.isMinter(minter));
 
         // addMinter: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
-        sbnft.addMinter(minter);
+        sbnft.addMinter(ZERO_ADDRESS);
 
         // removeMinter: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
-        sbnft.removeMinter(minter);
+        sbnft.removeMinter(ZERO_ADDRESS);
 
         // freezeMinters: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
         sbnft.freezeMinters();
@@ -557,9 +557,12 @@ contract SampleSingleTypeSBNFTTest is Test {
         // addMinter: failure: InvalidMinter
         vm.prank(owner);
         vm.expectRevert(
-            abi.encodeWithSelector(AbsSBNFT.InvalidMinter.selector, address(0))
+            abi.encodeWithSelector(
+                AbsSBNFT.InvalidMinter.selector,
+                ZERO_ADDRESS
+            )
         );
-        sbnft.addMinter(address(0));
+        sbnft.addMinter(ZERO_ADDRESS);
 
         // removeMinter: failure: InvalidMinter
         vm.prank(owner);
@@ -600,14 +603,14 @@ contract SampleSingleTypeSBNFTTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(AbsSBNFT.MintersFrozen.selector)
         );
-        sbnft.addMinter(minter);
+        sbnft.addMinter(ZERO_ADDRESS);
 
         // removeMinter: failure: MintersFrozen
         vm.prank(owner);
         vm.expectRevert(
             abi.encodeWithSelector(AbsSBNFT.MintersFrozen.selector)
         );
-        sbnft.removeMinter(minter);
+        sbnft.removeMinter(ZERO_ADDRESS);
 
         // freezeMinters: failure: MintersFrozen
         vm.prank(owner);
@@ -619,11 +622,11 @@ contract SampleSingleTypeSBNFTTest is Test {
 
     function testRefreshMetadata() public {
         // refreshMetadata: failure: OwnableUnauthorizedAccount
-        vm.prank(minter);
+        vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Ownable.OwnableUnauthorizedAccount.selector,
-                minter
+                ZERO_ADDRESS
             )
         );
         sbnft.refreshMetadata();

@@ -12,8 +12,6 @@ import {SampleSFT} from "../contracts/SampleSFT.sol";
 import {Test} from "./Test.sol";
 
 contract SampleSFTTest is Test {
-    address private constant ZERO_ADDRESS = address(0);
-
     SampleSFT private sft;
 
     address private owner = makeAddr("owner");
@@ -421,7 +419,7 @@ contract SampleSFTTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(Pausable.EnforcedPause.selector)
         );
-        sft.airdrop(holder1, 0, 0);
+        sft.airdrop(ZERO_ADDRESS, 0, 0);
 
         // time passes...
         vm.warp(block.timestamp + 1 days);
