@@ -258,7 +258,7 @@ contract SampleSBSFTTest is Test {
         sbsft.freezeSupplyCap(1);
     }
 
-    function setURIAndFreezeURI() public {
+    function testSetURIAndFreezeURI() public {
         string memory tokenURI = "https://sbsft.metadata.com/0x1";
 
         // setURI: failure: OwnableUnauthorizedAccount
@@ -541,7 +541,7 @@ contract SampleSBSFTTest is Test {
         assertEq(sbsft.holdingPeriod(holder1, 1), 0);
     }
 
-    function burnBatch() public {
+    function testBurnBatch() public {
         // burnBatch: failure: TokenUnregistered
         vm.prank(ZERO_ADDRESS);
         vm.expectRevert(
