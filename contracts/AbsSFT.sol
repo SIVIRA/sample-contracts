@@ -387,7 +387,7 @@ abstract contract AbsSFT is
                 _holdingAmountThreshold[tokenID_] &&
                 _holdingStartedAt[tokenID_][from_] > 0
             ) {
-                _holdingStartedAt[tokenID_][from_] = 0;
+                delete _holdingStartedAt[tokenID_][from_];
             }
 
             if (
