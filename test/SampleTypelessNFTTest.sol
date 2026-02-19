@@ -13,11 +13,11 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
-import {Test} from "forge-std/Test.sol";
-
 import {IAirdroppableNFT} from "../contracts/IAirdroppableNFT.sol";
 import {AbsNFT} from "../contracts/AbsNFT.sol";
 import {SampleTypelessNFT} from "../contracts/SampleTypelessNFT.sol";
+
+import {Test} from "./Test.sol";
 
 contract SampleTypelessNFTTest is Test {
     using Strings for uint256;
@@ -709,7 +709,7 @@ contract SampleTypelessNFTTest is Test {
 
         // airdropWithTokenURI: success
         vm.prank(minter);
-        nft.airdropWithTokenURI(holder1, "https://nft.metadata.com/0x0");
+        nft.airdropWithTokenURI(holder1, "");
 
         {
             (address receiver, uint256 amount) = nft.royaltyInfo(0, 1 ether);
@@ -768,7 +768,7 @@ contract SampleTypelessNFTTest is Test {
 
         // airdropWithTokenURI: success
         vm.prank(minter);
-        nft.airdropWithTokenURI(holder1, "https://nft.metadata.com/0x0");
+        nft.airdropWithTokenURI(holder1, "");
 
         assertEq(nft.userOf(0), address(0));
         assertEq(nft.userExpires(0), 0);
@@ -933,8 +933,8 @@ contract SampleTypelessNFTTest is Test {
 
         // airdropWithTokenURI: success
         vm.startPrank(minter);
-        nft.airdropWithTokenURI(holder1, "https://nft.metadata.com/0x0");
-        nft.airdropWithTokenURI(holder2, "https://nft.metadata.com/0x1");
+        nft.airdropWithTokenURI(holder1, "");
+        nft.airdropWithTokenURI(holder2, "");
         vm.stopPrank();
 
         // refreshMetadata: success

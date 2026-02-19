@@ -12,11 +12,11 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
-import {Test} from "forge-std/Test.sol";
-
 import {IAirdroppableNFT} from "../contracts/IAirdroppableNFT.sol";
 import {AbsSBNFT} from "../contracts/AbsSBNFT.sol";
 import {SampleTypelessSBNFT} from "../contracts/SampleTypelessSBNFT.sol";
+
+import {Test} from "./Test.sol";
 
 contract SampleTypelessSBNFTTest is Test {
     using Strings for uint256;
@@ -337,7 +337,7 @@ contract SampleTypelessSBNFTTest is Test {
 
         // airdropWithTokenURI: success
         vm.prank(minter);
-        sbnft.airdropWithTokenURI(holder1, "https://sbnft.metadata.com/0x0");
+        sbnft.airdropWithTokenURI(holder1, "");
 
         // safeTransferFrom: failure: Soulbound
         vm.prank(holder1);
@@ -578,8 +578,8 @@ contract SampleTypelessSBNFTTest is Test {
 
         // airdropWithTokenURI: success
         vm.startPrank(minter);
-        sbnft.airdropWithTokenURI(holder1, "https://sbnft.metadata.com/0x0");
-        sbnft.airdropWithTokenURI(holder2, "https://sbnft.metadata.com/0x1");
+        sbnft.airdropWithTokenURI(holder1, "");
+        sbnft.airdropWithTokenURI(holder2, "");
         vm.stopPrank();
 
         // refreshMetadata: success

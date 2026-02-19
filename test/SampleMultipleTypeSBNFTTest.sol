@@ -12,11 +12,11 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
-import {Test} from "forge-std/Test.sol";
-
 import {IAirdroppableNFT} from "../contracts/IAirdroppableNFT.sol";
 import {AbsSBNFT} from "../contracts/AbsSBNFT.sol";
 import {SampleMultipleTypeSBNFT} from "../contracts/SampleMultipleTypeSBNFT.sol";
+
+import {Test} from "./Test.sol";
 
 contract SampleMultipleTypeSBNFTTest is Test {
     using Strings for uint256;
