@@ -131,12 +131,12 @@ abstract contract AbsSBNFT is IERC4906, ERC721Enumerable, Ownable, Pausable {
     ) public view override returns (string memory) {
         _requireOwned(tokenID_);
 
-        if (bytes(_tokenURI[tokenID_]).length > 0) {
-            return _tokenURI[tokenID_];
-        }
+        string memory tokenURI_ = _tokenURI[tokenID_];
 
         return
-            bytes(_baseTokenURI).length > 0
+            bytes(tokenURI_).length > 0
+                ? tokenURI_
+                : bytes(_baseTokenURI).length > 0
                 ? string(
                     abi.encodePacked(
                         _baseTokenURI,

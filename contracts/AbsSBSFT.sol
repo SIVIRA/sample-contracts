@@ -6,16 +6,14 @@ import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {ERC1155Supply} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import {ERC1155Burnable} from "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Burnable.sol";
-import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-abstract contract AbsSFT is
+abstract contract AbsSBSFT is
     IERC165,
     ERC1155Supply,
     ERC1155Burnable,
-    ERC2981,
     Ownable,
     Pausable
 {
@@ -31,11 +29,11 @@ abstract contract AbsSFT is
 
     error InvalidHoldingAmountThreshold(uint256 holdingAmountThreshold);
 
-    error RoyaltyFrozen();
-
     error InvalidMinter(address minter);
     error MinterAlreadyAdded(address minter);
     error MintersFrozen();
+
+    error Soulbound();
 
     event TokenRegistered(
         uint256 indexed tokenID,
@@ -59,8 +57,6 @@ abstract contract AbsSFT is
     mapping(uint256 tokenID => mapping(address holder => uint256))
         internal _holdingStartedAt;
 
-    bool internal _isRoyaltyFrozen;
-
     mapping(address minter => bool) internal _isMinter;
     bool internal _isMintersFrozen;
 
@@ -73,13 +69,11 @@ abstract contract AbsSFT is
     constructor(
         address owner_,
         string memory tokenURI_
-    ) ERC1155(tokenURI_) Ownable(owner_) {
-        _setDefaultRoyalty(owner_, 0);
-    }
+    ) ERC1155(tokenURI_) Ownable(owner_) {}
 
     function supportsInterface(
         bytes4 interfaceID_
-    ) public view virtual override(IERC165, ERC1155, ERC2981) returns (bool) {
+    ) public view virtual override(IERC165, ERC1155) returns (bool) {
         return super.supportsInterface(interfaceID_);
     }
 
@@ -115,7 +109,6 @@ abstract contract AbsSFT is
         if (bytes(tokenURI_).length > 0) {
             _tokenURI[tokenID_] = tokenURI_;
         }
-
         _holdingAmountThreshold[tokenID_] = holdingAmountThreshold_;
 
         emit TokenRegistered(tokenID_, tokenURI_, holdingAmountThreshold_);
@@ -273,30 +266,6 @@ abstract contract AbsSFT is
         super.burnBatch(from_, tokenIDs_, amounts_);
     }
 
-    function royaltyInfo(
-        uint256 tokenID_,
-        uint256 salePrice_
-    ) public view override returns (address, uint256) {
-        _requireTokenRegistered(tokenID_);
-
-        return super.royaltyInfo(tokenID_, salePrice_);
-    }
-
-    function setDefaultRoyalty(
-        address receiver_,
-        uint96 feeNumerator_
-    ) external onlyOwner {
-        _requireRoyaltyNotFrozen();
-
-        _setDefaultRoyalty(receiver_, feeNumerator_);
-    }
-
-    function freezeRoyalty() external onlyOwner {
-        _requireRoyaltyNotFrozen();
-
-        _isRoyaltyFrozen = true;
-    }
-
     function isMinter(address minter_) external view returns (bool) {
         return _isMinter[minter_];
     }
@@ -344,10 +313,6 @@ abstract contract AbsSFT is
         require(!_isTokenURIFrozen[tokenID_], TokenURIFrozen(tokenID_));
     }
 
-    function _requireRoyaltyNotFrozen() internal view {
-        require(!_isRoyaltyFrozen, RoyaltyFrozen());
-    }
-
     function _requireMintersNotFrozen() internal view {
         require(!_isMintersFrozen, MintersFrozen());
     }
@@ -376,26 +341,28 @@ abstract contract AbsSFT is
         bool isMinting = from_ == address(0);
         bool isBurning = to_ == address(0);
 
+        require(isMinting || isBurning, Soulbound());
+
         super._update(from_, to_, tokenIDs_, amounts_);
 
         for (uint256 i = 0; i < tokenIDs_.length; i++) {
             uint256 tokenID_ = tokenIDs_[i];
 
             if (
-                !isMinting &&
+                isMinting &&
+                balanceOf(to_, tokenID_) >= _holdingAmountThreshold[tokenID_] &&
+                _holdingStartedAt[tokenID_][to_] == 0
+            ) {
+                _holdingStartedAt[tokenID_][to_] = block.timestamp;
+            }
+
+            if (
+                isBurning &&
                 balanceOf(from_, tokenID_) <
                 _holdingAmountThreshold[tokenID_] &&
                 _holdingStartedAt[tokenID_][from_] > 0
             ) {
                 delete _holdingStartedAt[tokenID_][from_];
-            }
-
-            if (
-                !isBurning &&
-                balanceOf(to_, tokenID_) >= _holdingAmountThreshold[tokenID_] &&
-                _holdingStartedAt[tokenID_][to_] == 0
-            ) {
-                _holdingStartedAt[tokenID_][to_] = block.timestamp;
             }
         }
     }
