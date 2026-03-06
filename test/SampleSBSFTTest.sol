@@ -7,12 +7,12 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {AbsSBSFT} from "../contracts/AbsSBSFT.sol";
-import {SampleSBSFT} from "../contracts/SampleSBSFT.sol";
+import {SampleSBSFT as SBSFT} from "../contracts/SampleSBSFT.sol";
 
 import {Test} from "./Test.sol";
 
 contract SampleSBSFTTest is Test {
-    SampleSBSFT private sbsft;
+    SBSFT private sbsft;
 
     address private owner = makeAddr("owner");
     address private minter = makeAddr("minter");
@@ -22,7 +22,7 @@ contract SampleSBSFTTest is Test {
 
     function setUp() public {
         vm.prank(owner);
-        sbsft = new SampleSBSFT();
+        sbsft = new SBSFT();
     }
 
     function testInitialState() public view {

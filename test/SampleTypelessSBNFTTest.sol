@@ -14,14 +14,14 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {IAirdroppableNFT} from "../contracts/IAirdroppableNFT.sol";
 import {AbsSBNFT} from "../contracts/AbsSBNFT.sol";
-import {SampleTypelessSBNFT} from "../contracts/SampleTypelessSBNFT.sol";
+import {SampleTypelessSBNFT as SBNFT} from "../contracts/SampleTypelessSBNFT.sol";
 
 import {Test} from "./Test.sol";
 
 contract SampleTypelessSBNFTTest is Test {
     using Strings for uint256;
 
-    SampleTypelessSBNFT private sbnft;
+    SBNFT private sbnft;
 
     address private owner = makeAddr("owner");
     address private minter = makeAddr("minter");
@@ -30,7 +30,7 @@ contract SampleTypelessSBNFTTest is Test {
 
     function setUp() public {
         vm.prank(owner);
-        sbnft = new SampleTypelessSBNFT();
+        sbnft = new SBNFT();
     }
 
     function testInitialState() public view {
@@ -570,9 +570,7 @@ contract SampleTypelessSBNFTTest is Test {
 
         // refreshMetadata: failure: NoTokensMinted
         vm.prank(owner);
-        vm.expectRevert(
-            abi.encodeWithSelector(SampleTypelessSBNFT.NoTokensMinted.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(SBNFT.NoTokensMinted.selector));
         sbnft.refreshMetadata();
 
         // addMinter: success

@@ -15,14 +15,14 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {IAirdroppableNFT} from "../contracts/IAirdroppableNFT.sol";
 import {AbsNFT} from "../contracts/AbsNFT.sol";
-import {SampleTypelessNFT} from "../contracts/SampleTypelessNFT.sol";
+import {SampleTypelessNFT as NFT} from "../contracts/SampleTypelessNFT.sol";
 
 import {Test} from "./Test.sol";
 
 contract SampleTypelessNFTTest is Test {
     using Strings for uint256;
 
-    SampleTypelessNFT private nft;
+    NFT private nft;
 
     address private owner = makeAddr("owner");
     address private minter = makeAddr("minter");
@@ -32,7 +32,7 @@ contract SampleTypelessNFTTest is Test {
 
     function setUp() public {
         vm.prank(owner);
-        nft = new SampleTypelessNFT();
+        nft = new NFT();
     }
 
     function testInitialState() public view {
@@ -918,9 +918,7 @@ contract SampleTypelessNFTTest is Test {
 
         // refreshMetadata: failure: NoTokensMinted
         vm.prank(owner);
-        vm.expectRevert(
-            abi.encodeWithSelector(SampleTypelessNFT.NoTokensMinted.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(NFT.NoTokensMinted.selector));
         nft.refreshMetadata();
 
         // addMinter: success

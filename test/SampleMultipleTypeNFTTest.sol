@@ -15,7 +15,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {IAirdroppableNFT} from "../contracts/IAirdroppableNFT.sol";
 import {AbsNFT} from "../contracts/AbsNFT.sol";
-import {SampleMultipleTypeNFT} from "../contracts/SampleMultipleTypeNFT.sol";
+import {SampleMultipleTypeNFT as NFT} from "../contracts/SampleMultipleTypeNFT.sol";
 
 import {Test} from "./Test.sol";
 
@@ -25,7 +25,7 @@ contract SampleMultipleTypeNFTTest is Test {
     uint256 private constant MIN_TOKEN_TYPE = 1;
     uint256 private constant MAX_TOKEN_TYPE = 3;
 
-    SampleMultipleTypeNFT private nft;
+    NFT private nft;
 
     address private owner = makeAddr("owner");
     address private minter = makeAddr("minter");
@@ -35,7 +35,7 @@ contract SampleMultipleTypeNFTTest is Test {
 
     function setUp() public {
         vm.prank(owner);
-        nft = new SampleMultipleTypeNFT(MIN_TOKEN_TYPE, MAX_TOKEN_TYPE);
+        nft = new NFT(MIN_TOKEN_TYPE, MAX_TOKEN_TYPE);
     }
 
     function testInitialState() public view {
@@ -133,7 +133,7 @@ contract SampleMultipleTypeNFTTest is Test {
         vm.prank(owner);
         vm.expectRevert(
             abi.encodeWithSelector(
-                SampleMultipleTypeNFT.InvalidMaxTokenType.selector,
+                NFT.InvalidMaxTokenType.selector,
                 MAX_TOKEN_TYPE
             )
         );
@@ -467,10 +467,7 @@ contract SampleMultipleTypeNFTTest is Test {
         vm.startPrank(minter);
         for (uint256 tt = MIN_TOKEN_TYPE; tt <= MAX_TOKEN_TYPE; tt++) {
             vm.expectRevert(
-                abi.encodeWithSelector(
-                    SampleMultipleTypeNFT.AlreadyAirdropped.selector,
-                    holder1
-                )
+                abi.encodeWithSelector(NFT.AlreadyAirdropped.selector, holder1)
             );
             nft.airdropByType(holder1, tt);
         }
@@ -1064,11 +1061,7 @@ contract SampleMultipleTypeNFTTest is Test {
 
         // refreshMetadata: failure: NoTokensMinted
         vm.prank(owner);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                SampleMultipleTypeNFT.NoTokensMinted.selector
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(NFT.NoTokensMinted.selector));
         nft.refreshMetadata();
 
         // addMinter: success

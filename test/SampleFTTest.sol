@@ -7,14 +7,14 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {AbsFT} from "../contracts/AbsFT.sol";
-import {SampleFT} from "../contracts/SampleFT.sol";
+import {SampleFT as FT} from "../contracts/SampleFT.sol";
 
 import {Test} from "./Test.sol";
 
 contract SampleFTTest is Test {
     uint256 private constant HOLDING_AMOUNT_THRESHOLD = 100;
 
-    SampleFT internal ft;
+    FT internal ft;
 
     address private owner = makeAddr("owner");
     address private minter = makeAddr("minter");
@@ -23,7 +23,7 @@ contract SampleFTTest is Test {
 
     function setUp() public {
         vm.prank(owner);
-        ft = new SampleFT(HOLDING_AMOUNT_THRESHOLD);
+        ft = new FT(HOLDING_AMOUNT_THRESHOLD);
     }
 
     function testInitialState() public view {
