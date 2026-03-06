@@ -15,14 +15,14 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {IAirdroppableNFT} from "../contracts/IAirdroppableNFT.sol";
 import {AbsNFT} from "../contracts/AbsNFT.sol";
-import {SampleSingleTypeNFT} from "../contracts/SampleSingleTypeNFT.sol";
+import {SampleSingleTypeNFT as NFT} from "../contracts/SampleSingleTypeNFT.sol";
 
 import {Test} from "./Test.sol";
 
 contract SampleSingleTypeNFTTest is Test {
     using Strings for uint256;
 
-    SampleSingleTypeNFT private nft;
+    NFT private nft;
 
     address private owner = makeAddr("owner");
     address private minter = makeAddr("minter");
@@ -32,7 +32,7 @@ contract SampleSingleTypeNFTTest is Test {
 
     function setUp() public {
         vm.prank(owner);
-        nft = new SampleSingleTypeNFT();
+        nft = new NFT();
     }
 
     function testInitialState() public view {
@@ -393,10 +393,7 @@ contract SampleSingleTypeNFTTest is Test {
         // airdrop: failure: AlreadyAirdropped
         vm.prank(minter);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                SampleSingleTypeNFT.AlreadyAirdropped.selector,
-                holder1
-            )
+            abi.encodeWithSelector(NFT.AlreadyAirdropped.selector, holder1)
         );
         nft.airdrop(holder1);
 
@@ -993,9 +990,7 @@ contract SampleSingleTypeNFTTest is Test {
 
         // refreshMetadata: failure: NoTokensMinted
         vm.prank(owner);
-        vm.expectRevert(
-            abi.encodeWithSelector(SampleSingleTypeNFT.NoTokensMinted.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(NFT.NoTokensMinted.selector));
         nft.refreshMetadata();
 
         // addMinter: success

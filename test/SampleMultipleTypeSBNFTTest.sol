@@ -14,7 +14,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {IAirdroppableNFT} from "../contracts/IAirdroppableNFT.sol";
 import {AbsSBNFT} from "../contracts/AbsSBNFT.sol";
-import {SampleMultipleTypeSBNFT} from "../contracts/SampleMultipleTypeSBNFT.sol";
+import {SampleMultipleTypeSBNFT as SBNFT} from "../contracts/SampleMultipleTypeSBNFT.sol";
 
 import {Test} from "./Test.sol";
 
@@ -24,7 +24,7 @@ contract SampleMultipleTypeSBNFTTest is Test {
     uint256 private constant MIN_TOKEN_TYPE = 1;
     uint256 private constant MAX_TOKEN_TYPE = 3;
 
-    SampleMultipleTypeSBNFT private sbnft;
+    SBNFT private sbnft;
 
     address private owner = makeAddr("owner");
     address private minter = makeAddr("minter");
@@ -33,7 +33,7 @@ contract SampleMultipleTypeSBNFTTest is Test {
 
     function setUp() public {
         vm.prank(owner);
-        sbnft = new SampleMultipleTypeSBNFT(MIN_TOKEN_TYPE, MAX_TOKEN_TYPE);
+        sbnft = new SBNFT(MIN_TOKEN_TYPE, MAX_TOKEN_TYPE);
     }
 
     function testInitialState() public view {
@@ -129,7 +129,7 @@ contract SampleMultipleTypeSBNFTTest is Test {
         vm.prank(owner);
         vm.expectRevert(
             abi.encodeWithSelector(
-                SampleMultipleTypeSBNFT.InvalidMaxTokenType.selector,
+                SBNFT.InvalidMaxTokenType.selector,
                 MAX_TOKEN_TYPE
             )
         );
@@ -417,7 +417,7 @@ contract SampleMultipleTypeSBNFTTest is Test {
         for (uint256 tt = MIN_TOKEN_TYPE; tt <= MAX_TOKEN_TYPE; tt++) {
             vm.expectRevert(
                 abi.encodeWithSelector(
-                    SampleMultipleTypeSBNFT.AlreadyAirdropped.selector,
+                    SBNFT.AlreadyAirdropped.selector,
                     holder1
                 )
             );
@@ -701,11 +701,7 @@ contract SampleMultipleTypeSBNFTTest is Test {
 
         // refreshMetadata: failure: NoTokensMinted
         vm.prank(owner);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                SampleMultipleTypeSBNFT.NoTokensMinted.selector
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(SBNFT.NoTokensMinted.selector));
         sbnft.refreshMetadata();
 
         // addMinter: success

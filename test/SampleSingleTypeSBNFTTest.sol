@@ -14,14 +14,14 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {IAirdroppableNFT} from "../contracts/IAirdroppableNFT.sol";
 import {AbsSBNFT} from "../contracts/AbsSBNFT.sol";
-import {SampleSingleTypeSBNFT} from "../contracts/SampleSingleTypeSBNFT.sol";
+import {SampleSingleTypeSBNFT as SBNFT} from "../contracts/SampleSingleTypeSBNFT.sol";
 
 import {Test} from "./Test.sol";
 
 contract SampleSingleTypeSBNFTTest is Test {
     using Strings for uint256;
 
-    SampleSingleTypeSBNFT private sbnft;
+    SBNFT private sbnft;
 
     address private owner = makeAddr("owner");
     address private minter = makeAddr("minter");
@@ -30,7 +30,7 @@ contract SampleSingleTypeSBNFTTest is Test {
 
     function setUp() public {
         vm.prank(owner);
-        sbnft = new SampleSingleTypeSBNFT();
+        sbnft = new SBNFT();
     }
 
     function testInitialState() public view {
@@ -345,10 +345,7 @@ contract SampleSingleTypeSBNFTTest is Test {
         // airdrop: failure: AlreadyAirdropped
         vm.prank(minter);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                SampleSingleTypeSBNFT.AlreadyAirdropped.selector,
-                holder1
-            )
+            abi.encodeWithSelector(SBNFT.AlreadyAirdropped.selector, holder1)
         );
         sbnft.airdrop(holder1);
 
@@ -633,11 +630,7 @@ contract SampleSingleTypeSBNFTTest is Test {
 
         // refreshMetadata: failure: NoTokensMinted
         vm.prank(owner);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                SampleSingleTypeSBNFT.NoTokensMinted.selector
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(SBNFT.NoTokensMinted.selector));
         sbnft.refreshMetadata();
 
         // addMinter: success
