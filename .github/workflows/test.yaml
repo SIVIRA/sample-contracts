@@ -10,12 +10,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: pnpm
       - name: Install dependencies
         run: make deps
       - name: Test
