@@ -802,7 +802,7 @@ packages:
     resolution: {integrity: sha512-rVjf7ArG3LTk+FS6Yw81V1DLuZl1bRbNrev6Tmd/9RaroeeRRJhAt7jg/6YFxbvAQXUCavSoZhPPj6oOx+5KjQ==}
 
   forge-std@https://codeload.github.com/foundry-rs/forge-std/tar.gz/620536fa5277db4e3fd46772d5cbc1ea0696fb43:
-    resolution: {gitHosted: true, integrity: sha512-RxfydS+JX7WEYyF/lS5CKqNirDg5womaWVp+pN48GI01GvTdME4ZYX3OjtGAVf9TUG+IkKyEHScBHijLEWg1iQ==, tarball: https://codeload.github.com/foundry-rs/forge-std/tar.gz/620536fa5277db4e3fd46772d5cbc1ea0696fb43}
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/foundry-rs/forge-std/tar.gz/620536fa5277db4e3fd46772d5cbc1ea0696fb43}
     version: 1.16.1
 
   fsevents@2.3.3:
