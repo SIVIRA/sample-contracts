@@ -431,7 +431,7 @@ contract SampleMultipleTypeNFTTest is Test {
         }
         vm.stopPrank();
 
-        assertEq(nft.balanceOf(holder1), 3);
+        assertEq(nft.balanceOf(holder1), MAX_TOKEN_TYPE - MIN_TOKEN_TYPE + 1);
         for (uint256 tt = MIN_TOKEN_TYPE; tt <= MAX_TOKEN_TYPE; tt++) {
             assertEq(nft.ownerOf(tt - MIN_TOKEN_TYPE), holder1);
             assertEq(
@@ -439,7 +439,7 @@ contract SampleMultipleTypeNFTTest is Test {
                 tt - MIN_TOKEN_TYPE
             );
         }
-        assertEq(nft.totalSupply(), 3);
+        assertEq(nft.totalSupply(), MAX_TOKEN_TYPE - MIN_TOKEN_TYPE + 1);
         for (uint256 tt = MIN_TOKEN_TYPE; tt <= MAX_TOKEN_TYPE; tt++) {
             assertEq(
                 nft.tokenByIndex(tt - MIN_TOKEN_TYPE),

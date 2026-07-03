@@ -391,7 +391,7 @@ contract SampleMultipleTypeSBNFTTest is Test {
         }
         vm.stopPrank();
 
-        assertEq(sbnft.balanceOf(holder1), 3);
+        assertEq(sbnft.balanceOf(holder1), MAX_TOKEN_TYPE - MIN_TOKEN_TYPE + 1);
         for (uint256 tt = MIN_TOKEN_TYPE; tt <= MAX_TOKEN_TYPE; tt++) {
             assertEq(sbnft.ownerOf(tt - MIN_TOKEN_TYPE), holder1);
             assertEq(
@@ -399,7 +399,7 @@ contract SampleMultipleTypeSBNFTTest is Test {
                 tt - MIN_TOKEN_TYPE
             );
         }
-        assertEq(sbnft.totalSupply(), 3);
+        assertEq(sbnft.totalSupply(), MAX_TOKEN_TYPE - MIN_TOKEN_TYPE + 1);
         for (uint256 tt = MIN_TOKEN_TYPE; tt <= MAX_TOKEN_TYPE; tt++) {
             assertEq(
                 sbnft.tokenByIndex(tt - MIN_TOKEN_TYPE),
