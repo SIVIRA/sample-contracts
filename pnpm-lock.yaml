@@ -172,9 +172,6 @@ importers:
       '@commitlint/config-conventional':
         specifier: 21.2.3
         version: 21.2.3
-      '@commitlint/types':
-        specifier: 21.2.3
-        version: 21.2.3
       '@openzeppelin/contracts':
         specifier: 5.6.1
         version: 5.6.1
